@@ -15,42 +15,52 @@
 //      - linux command to compare results: evtest (non-root!)
 
 use psutil::process::Process;
-use std::process;
-use std::{path::PathBuf, process::Command, thread, time::Duration};
+use std::{path::PathBuf, process, process::Command, thread, time::Duration};
+
+struct GameController {
+    path: PathBuf,
+    mac: String,
+}
 
 fn main() {
-    println!("Start");
-    let mut controllers: Vec<(PathBuf, String)> = Vec::new();
     let mut loading_show: String = String::from("..");
+    let process = Process::new(process::id()).unwrap();
 
     loop {
-        controllers = find_controllers();
+        let controllers: Vec<GameController> = find_controllers();
 
+        // terminal output
         let _ = Command::new("clear").status();
         println!("Searching for controllers{loading_show}");
         match loading_show.len() < 7 {
             true => loading_show.push('.'),
             false => loading_show = String::from(".."),
         }
-
-        for ctrlr in controllers {
-            println!("{:?} connected", ctrlr.1);
-        }
-
-        println!("");
-        let process = Process::new(process::id()).unwrap();
         let memory_usage = process.memory_info().unwrap().rss() as f64 / (1024.0 * 1024.0); // Memory in MB
         println!("Memory usage: {:.2} MB", memory_usage);
+        println!("");
 
-        thread::sleep(Duration::from_secs(3));
+        // Input Handling
+        for controller in controllers {
+            // Show in terminal what is connected
+            println!("{:?} connected", controller.mac.clone());
+
+            // Handle inputs in threads
+            let thread_handle = thread::spawn(move || {
+                read_controller_input();
+                println!("{:?}", controller.mac);
+            });
+
+            // TODO: Handle that one controller is never being read by two threads
+        }
+
+        // wait some time before checking for new devices
+        thread::sleep(Duration::from_secs(2));
     }
 }
 
-/// - Returns all found controllers, might be 0
-/// - Information as Tuple:
-///     0. PathBuf: Path in /dev/input
-///     1. String: MAC address with : already in between pairs)
-fn find_controllers() -> Vec<(PathBuf, String)> {
+/// Returns all found controllers, might be 0
+fn find_controllers() -> Vec<GameController> {
     // this was the original from their example.. but the collect is unnecessary??
     // let devices = evdev::enumerate().map(|tuple| tuple.1).collect::<Vec<_>>();
     // purpose of map: results of enumerate are the
@@ -63,7 +73,7 @@ fn find_controllers() -> Vec<(PathBuf, String)> {
     let known_device_names = [String::from("Wireless Controller")];
 
     // (Path in /dev/input/, MAC address of controller)
-    let mut usable_controllers: Vec<(PathBuf, String)> = Vec::new();
+    let mut usable_controllers: Vec<GameController> = Vec::new();
 
     // Find which devices could be game controllers
     for device in devices {
@@ -84,15 +94,17 @@ fn find_controllers() -> Vec<(PathBuf, String)> {
             continue;
         }
 
-        let controller_tuple: (PathBuf, String) = (device_path, device_mac);
-        usable_controllers.push(controller_tuple);
+        let gamecontroller: GameController = GameController {
+            path: device_path,
+            mac: device_mac,
+        };
+        usable_controllers.push(gamecontroller);
     }
 
     // TODO Check if there are multiple controllers with the same mac and only choose one of them,
     // so the second slot is available for a different controller
 
-    let controllers = usable_controllers.clone();
-    return controllers;
+    return usable_controllers;
 
     // match usable_controllers.len() {
     //     2.. => {
@@ -105,4 +117,8 @@ fn find_controllers() -> Vec<(PathBuf, String)> {
     //     0 => return [None, None],
     //     _ => unreachable!(),
     // };
+}
+
+fn read_controller_input() {
+    println!("fake input read :D");
 }
