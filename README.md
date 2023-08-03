@@ -1,4 +1,4 @@
-If you have any ideas or know of anything I should avoid or be careful with, don't hesitate to open an issue to tell me :D
+If you have any ideas or know of anything I should avoid or be careful with, don't hesitate to create a discussion to tell me :D
 
 # Idea
 
