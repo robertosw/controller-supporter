@@ -71,38 +71,48 @@ fn main() {
             };
         }
 
-        output_status(&mut loading_show, &process);
+        output_info(&mut loading_show, &process, &controllers);
 
-        // Display all controllers and create threads if possible
-        for controller in &mut controllers {
-            // Show in terminal what is connected
-            println!("{:?} connected", controller.mac.clone());
-
-            // Create new thread if allowed
-            match controller.thread_handle {
-                Some(_) => (),
-                None => {
-                    // Copy Controller for the new thread
-                    let threaded_controller: GameControllerSimple = GameControllerSimple {
-                        path: controller.path.clone(),
-                        mac: controller.mac.clone(),
-                    };
-
-                    // Create thread
-                    controller.thread_handle = Some(thread::spawn(move || {
-                        read_controller_input();
-                        println!("{:?}", threaded_controller.mac);
-                    }));
-                }
-            };
-        }
+        handle_threads(&mut controllers);
 
         // wait some time before checking for new devices
         thread::sleep(Duration::from_secs(2));
     }
 }
 
-fn output_status(loading_show: &mut String, process: &Process) {
+/// - Checks the thread handle to see if all controllers have running threads
+/// - Creates threads if necessary
+/// - Takes care that no controller is assigned two or more threads
+fn handle_threads(controllers: &mut Vec<GameController>) {
+    for controller in controllers {
+        // Create new thread if allowed
+        match controller.thread_handle {
+            Some(_) => (),
+            None => {
+                // Copy Controller for the new thread
+                let threaded_controller: GameControllerSimple = GameControllerSimple {
+                    path: controller.path.clone(),
+                    mac: controller.mac.clone(),
+                };
+
+                // Create thread
+                controller.thread_handle = Some(thread::spawn(move || {
+                    read_controller_input(threaded_controller);
+                }));
+            }
+        };
+    }
+}
+
+fn read_controller_input(_controller: GameControllerSimple) {
+    println!("fake input read :D");
+}
+
+/// Output Information to Terminal <br>
+/// - Show that programm is active with little animation
+/// - Show RAM usage
+/// - Show connected controllers by their mac address
+fn output_info(loading_show: &mut String, process: &Process, controllers: &Vec<GameController>) {
     let _ = Command::new("clear").status();
     println!("Searching for controllers{loading_show}");
     match loading_show.len() < 7 {
@@ -113,6 +123,11 @@ fn output_status(loading_show: &mut String, process: &Process) {
     // Memory in MB
     println!("Memory usage: {:.2} MB", memory_usage);
     println!("");
+
+    for controller in controllers {
+        // Show in terminal what is connected
+        println!("{:?} connected", controller.mac.clone());
+    }
 }
 
 /// Returns all found controllers, might be 0
@@ -161,8 +176,4 @@ fn get_controllers() -> Vec<GameControllerSimple> {
     // so the second slot is available for a different controller
 
     return usable_controllers;
-}
-
-fn read_controller_input() {
-    println!("fake input read :D");
 }
