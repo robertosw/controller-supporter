@@ -14,6 +14,7 @@ I expect there will be some problems as Playstations communicate both ways, but 
  
 # Used hardware
 - Raspberry Pi Zero 2W
+  - Since this raspi is able to run the normal raspi OS, this project is made easier because the bluetooth and usb connection is handled by the OS, which means the data can just be read from and written to a filehandler instead of having to connect everything manually.
 - [Raspberry Sense HAT (not yet)](https://www.raspberrypi.com/products/sense-hat)
 - Emulator stick
   - Connects to PS5 controllers and emulates them as XBOX for Win10 and PS4 for PS4
