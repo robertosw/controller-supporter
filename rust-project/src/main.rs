@@ -14,15 +14,35 @@
 //      2.2 Read inputs (maybe two controllers can be multithreaded)
 //      - linux command to compare results: evtest (non-root!)
 
-use std::{path::PathBuf, thread, time::Duration};
+use psutil::process::Process;
+use std::process;
+use std::{path::PathBuf, process::Command, thread, time::Duration};
 
 fn main() {
     println!("Start");
     let mut controllers: Vec<(PathBuf, String)> = Vec::new();
+    let mut loading_show: String = String::from("..");
 
     loop {
         controllers = find_controllers();
-        thread::sleep(Duration::from_secs(5));
+
+        let _ = Command::new("clear").status();
+        println!("Searching for controllers{loading_show}");
+        match loading_show.len() < 7 {
+            true => loading_show.push('.'),
+            false => loading_show = String::from(".."),
+        }
+
+        for ctrlr in controllers {
+            println!("{:?} connected", ctrlr.1);
+        }
+
+        println!("");
+        let process = Process::new(process::id()).unwrap();
+        let memory_usage = process.memory_info().unwrap().rss() as f64 / (1024.0 * 1024.0); // Memory in MB
+        println!("Memory usage: {:.2} MB", memory_usage);
+
+        thread::sleep(Duration::from_secs(3));
     }
 }
 
@@ -37,7 +57,6 @@ fn find_controllers() -> Vec<(PathBuf, String)> {
     // tuple (PathBuf, Device), of this tuple, take only the Device
 
     // Get all devices the user has access to
-    println!("Searching for controllers");
     let devices = evdev::enumerate();
 
     // What to search for in the list of devices, that could be a controller
@@ -64,8 +83,6 @@ fn find_controllers() -> Vec<(PathBuf, String)> {
             println!("Device is no controller or mac is not readable");
             continue;
         }
-
-        println!("Controller '{device_name}' ({device_mac}) detected");
 
         let controller_tuple: (PathBuf, String) = (device_path, device_mac);
         usable_controllers.push(controller_tuple);
