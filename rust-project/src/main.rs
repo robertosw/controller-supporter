@@ -23,84 +23,141 @@ use std::{
     time::Duration,
 };
 
+#[derive(Clone)]
 struct GameControllerSimple {
     path: PathBuf,
     mac: String,
 }
+
 struct GameController {
     path: PathBuf,
     mac: String,
     thread_handle: Option<JoinHandle<()>>,
 }
 
-fn main() {
-    let mut loading_show: String = String::from("..");
-    let process = Process::new(process::id()).unwrap();
-    let mut controllers: Vec<GameController> = Vec::new();
+struct GameControllerCollection {
+    first: Option<GameController>,
+    second: Option<GameController>,
+}
+impl GameControllerCollection {
+    /// How many controllers are being used?
+    fn len(&self) -> u8 {
+        let mut _count: u8 = 0;
 
-    loop {
-        let new_controllers: Vec<GameControllerSimple> = get_controllers();
+        match &self.first {
+            None => (),
+            Some(_) => _count += 1,
+        };
+        match &self.second {
+            None => (),
+            Some(_) => _count += 1,
+        };
 
-        // Check if results of find_controllers contain new controllers
-        for new_ctrl in new_controllers {
-            match controllers.len() {
-                2 => {
-                    // Override the oldest (first connected) controller
-                    if (controllers[0].mac != new_ctrl.mac) && (controllers[1].mac != new_ctrl.mac)
-                    {
-                        controllers[0].path = new_ctrl.path;
-                        controllers[0].mac = new_ctrl.mac;
-                    }
+        return _count;
+    }
+
+    /// Is this Controller already known?
+    fn contains(&self, new_ctrl: GameControllerSimple) -> bool {
+        let mut _first_contains: bool;
+        let mut _second_contains: bool;
+
+        match &self.first {
+            None => _first_contains = false,
+            Some(ctrl) => {
+                if ctrl.mac == new_ctrl.mac {
+                    _first_contains = true;
                 }
-                1 => {
-                    // If new_ctrl is not already in controllers, add it
-                    if controllers[0].mac != new_ctrl.mac {
-                        controllers.push(GameController {
-                            path: new_ctrl.path,
-                            mac: new_ctrl.mac,
-                            thread_handle: None,
-                        });
-                    }
+                _first_contains = false;
+            }
+        };
+        match &self.second {
+            None => _second_contains = false,
+            Some(ctrl) => {
+                if ctrl.mac == new_ctrl.mac {
+                    _second_contains = true;
                 }
-                0 => controllers.push(GameController {
+                _second_contains = false;
+            }
+        };
+
+        return _first_contains || _second_contains;
+    }
+
+    /// WARNING: If the collection is already full, nothing will be changed <br>
+    /// Adds the given controller to the collection in the top most place
+    fn add(&mut self, new_ctrl: GameControllerSimple) {
+        match &self.first {
+            None => {
+                self.first = Some(GameController {
                     path: new_ctrl.path,
                     mac: new_ctrl.mac,
                     thread_handle: None,
-                }),
-                _ => (),
-            };
-        }
+                });
+                return;
+            }
+            Some(_) => (),
+        };
 
-        output_info(&mut loading_show, &process, &controllers);
-
-        handle_threads(&mut controllers);
-
-        // wait some time before checking for new devices
-        thread::sleep(Duration::from_secs(2));
+        match &self.second {
+            None => {
+                self.second = Some(GameController {
+                    path: new_ctrl.path,
+                    mac: new_ctrl.mac,
+                    thread_handle: None,
+                });
+                return;
+            }
+            Some(_) => (),
+        };
     }
 }
 
-/// - Checks the thread handle to see if all controllers have running threads
-/// - Creates threads if necessary
-/// - Takes care that no controller is assigned two or more threads
-fn handle_threads(controllers: &mut Vec<GameController>) {
-    for controller in controllers {
-        // Create new thread if allowed
-        match controller.thread_handle {
-            Some(_) => (),
-            None => {
-                // Copy Controller for the new thread
-                let threaded_controller: GameControllerSimple = GameControllerSimple {
-                    path: controller.path.clone(),
-                    mac: controller.mac.clone(),
-                };
+// TODO: The same controller is in both slots currently
+// TODO: Add a "count" variable to the collection which is updated in add/remove/len
+// TODO: the collection needs a remove method
+// TODO: Move struct and impl into seperate file
 
-                // Create thread
-                controller.thread_handle = Some(thread::spawn(move || {
-                    read_controller_input(threaded_controller);
-                }));
+fn main() {
+    let mut loading_show: String = String::from("..");
+    let process = Process::new(process::id()).unwrap();
+    let mut ctrls: GameControllerCollection = GameControllerCollection {
+        first: None,
+        second: None,
+    };
+    let mut ctrl_count: u8 = 0;
+    // let mut ctrls: [Option<GameController>; 2] = [None, None];
+
+    loop {
+        if ctrl_count < 2 {
+            let new_ctrls: Vec<GameControllerSimple> = get_controllers();
+
+            // Check if results of find_controllers contain new controllers
+            for new_ctrl in new_ctrls {
+                match ctrls.len() {
+                    2 => ctrl_count = 2, // two controllers already connected, nothing else to do
+                    1 => {
+                        ctrl_count = 1;
+
+                        // If new_ctrl is not already in controllers, add it
+                        match ctrls.contains(new_ctrl.clone()) {
+                            false => ctrls.add(new_ctrl.clone()),
+                            true => (),
+                        }
+                    }
+                    0 => {
+                        ctrl_count = 0;
+                        ctrls.add(new_ctrl.clone());
+                    }
+                    _ => (), // do nothing
+                };
             }
-        };
+        }
+
+        output_info(&mut loading_show, &process, &ctrls, ctrl_count.clone());
+        handle_threads(&mut ctrls);
+
+        // wait some time before checking for new devices
+        thread::sleep(Duration::from_secs(2));
     }
 }
 
@@ -108,35 +165,80 @@ fn read_controller_input(_controller: GameControllerSimple) {
     println!("fake input read :D");
 }
 
+/// - Checks the thread handle to see if all controllers have running threads
+/// - Creates threads if necessary
+/// - Takes care that no controller is assigned two or more threads
+fn handle_threads(ctrls: &mut GameControllerCollection) {
+    match &mut ctrls.first {
+        None => (),
+        Some(ctrl) => _create_new_thread(ctrl),
+    }
+    match &mut ctrls.second {
+        None => (),
+        Some(ctrl) => _create_new_thread(ctrl),
+    }
+
+    fn _create_new_thread(controller: &mut GameController) {
+        match controller.thread_handle {
+            None => {
+                // Copy Controller for the new thread
+                let threaded_controller: GameControllerSimple = GameControllerSimple {
+                    path: controller.path.clone(),
+                    mac: controller.mac.clone(),
+                };
+
+                // Create thread and link it in collection
+                controller.thread_handle = Some(thread::spawn(move || {
+                    read_controller_input(threaded_controller);
+                }));
+            }
+            Some(_) => (),
+        };
+    }
+}
+
 /// Output Information to Terminal <br>
 /// - Show that programm is active with little animation
 /// - Show RAM usage
 /// - Show connected controllers by their mac address
-fn output_info(loading_show: &mut String, process: &Process, controllers: &Vec<GameController>) {
+fn output_info(
+    loading_show: &mut String,
+    process: &Process,
+    ctrls: &GameControllerCollection,
+    ctrl_count: u8,
+) {
     let _ = Command::new("clear").status();
-    println!("Searching for controllers{loading_show}");
-    match loading_show.len() < 7 {
-        true => loading_show.push('.'),
-        false => *loading_show = String::from(".."),
+
+    match (loading_show.len() < 7) && (ctrl_count < 2) {
+        true => {
+            println!("Searching for controllers{loading_show}");
+            loading_show.push('.');
+        }
+        false => println!("Scanning stopped, disconnect one controller to restart scan"),
     }
+
     let memory_usage = process.memory_info().unwrap().rss() as f64 / (1024.0 * 1024.0);
     // Memory in MB
     println!("Memory usage: {:.2} MB", memory_usage);
     println!("");
 
-    for controller in controllers {
-        // Show in terminal what is connected
-        println!("{:?} connected", controller.mac.clone());
+    // Show in terminal what is connected
+    match &ctrls.first {
+        None => (),
+        Some(ctrl) => {
+            println!("{:?} connected", ctrl.mac.clone());
+        }
+    }
+    match &ctrls.second {
+        None => (),
+        Some(ctrl) => {
+            println!("{:?} connected", ctrl.mac.clone());
+        }
     }
 }
 
 /// Returns all found controllers, might be 0
 fn get_controllers() -> Vec<GameControllerSimple> {
-    // this was the original from their example.. but the collect is unnecessary??
-    // let devices = evdev::enumerate().map(|tuple| tuple.1).collect::<Vec<_>>();
-    // purpose of map: results of enumerate are the
-    // tuple (PathBuf, Device), of this tuple, take only the Device
-
     // Get all devices the user has access to
     let devices = evdev::enumerate();
 

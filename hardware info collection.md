@@ -1,7 +1,7 @@
 # Source Code
 Run without root access
 ```Rust
-let devices = evdev: :enumerate().map(|tuple| tuple.1);
+let devices = evdev::enumerate().map(|tuple| tuple.1);
 for device in devices {
     println!("device  - {:?}", device.toString());
 }
