@@ -10,7 +10,7 @@ I expect there will be some problems as Playstations communicate both ways, but 
 
 # What I can test
 - **Platforms:** PS4 and PC
-- **Controllers:** PS5, PS4 and a third-party XBOX controller
+- **Controllers:** PS5, PS4 connected via BT to Raspi
  
 # Used hardware
 - Raspberry Pi Zero 2W
