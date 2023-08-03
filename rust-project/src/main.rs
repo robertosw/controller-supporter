@@ -30,8 +30,7 @@ struct GameControllerSimple {
 struct GameController {
     path: PathBuf,
     mac: String,
-    has_thread: bool,
-    // thread_handle: Option<JoinHandle<()>>,
+    thread_handle: Option<JoinHandle<()>>,
 }
 
 fn main() {
@@ -40,7 +39,7 @@ fn main() {
     let mut controllers: Vec<GameController> = Vec::new();
 
     loop {
-        let new_controllers: Vec<GameControllerSimple> = find_controllers();
+        let new_controllers: Vec<GameControllerSimple> = get_controllers();
 
         // Check if results of find_controllers contain new controllers
         for new_ctrl in new_controllers {
@@ -59,14 +58,14 @@ fn main() {
                         controllers.push(GameController {
                             path: new_ctrl.path,
                             mac: new_ctrl.mac,
-                            has_thread: false,
+                            thread_handle: None,
                         });
                     }
                 }
                 0 => controllers.push(GameController {
                     path: new_ctrl.path,
                     mac: new_ctrl.mac,
-                    has_thread: false,
+                    thread_handle: None,
                 }),
                 _ => (),
             };
@@ -74,28 +73,28 @@ fn main() {
 
         output_status(&mut loading_show, &process);
 
-        // Input Handling
+        // Display all controllers and create threads if possible
         for controller in &mut controllers {
             // Show in terminal what is connected
             println!("{:?} connected", controller.mac.clone());
 
             // Create new thread if allowed
-            if controller.has_thread == false {
-                controller.has_thread = true;
+            match controller.thread_handle {
+                Some(_) => (),
+                None => {
+                    // Copy Controller for the new thread
+                    let threaded_controller: GameControllerSimple = GameControllerSimple {
+                        path: controller.path.clone(),
+                        mac: controller.mac.clone(),
+                    };
 
-                // Copy Controller for the new thread
-                let threaded_controller: GameController = GameController {
-                    path: controller.path.clone(),
-                    mac: controller.mac.clone(),
-                    has_thread: true,
-                };
-
-                // Handle inputs in threads
-                let _thread_handle = thread::spawn(move || {
-                    read_controller_input();
-                    println!("{:?}", threaded_controller.mac);
-                });
-            }
+                    // Create thread
+                    controller.thread_handle = Some(thread::spawn(move || {
+                        read_controller_input();
+                        println!("{:?}", threaded_controller.mac);
+                    }));
+                }
+            };
         }
 
         // wait some time before checking for new devices
@@ -117,7 +116,7 @@ fn output_status(loading_show: &mut String, process: &Process) {
 }
 
 /// Returns all found controllers, might be 0
-fn find_controllers() -> Vec<GameControllerSimple> {
+fn get_controllers() -> Vec<GameControllerSimple> {
     // this was the original from their example.. but the collect is unnecessary??
     // let devices = evdev::enumerate().map(|tuple| tuple.1).collect::<Vec<_>>();
     // purpose of map: results of enumerate are the
