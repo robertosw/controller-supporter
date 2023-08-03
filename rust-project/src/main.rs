@@ -20,43 +20,56 @@ use std::{path::PathBuf, process, process::Command, thread, time::Duration};
 struct GameController {
     path: PathBuf,
     mac: String,
+    has_thread: bool,
 }
 
 fn main() {
     let mut loading_show: String = String::from("..");
     let process = Process::new(process::id()).unwrap();
+    let mut controllers: Vec<GameController> = Vec::new();
 
     loop {
-        let controllers: Vec<GameController> = find_controllers();
-
-        // terminal output
-        let _ = Command::new("clear").status();
-        println!("Searching for controllers{loading_show}");
-        match loading_show.len() < 7 {
-            true => loading_show.push('.'),
-            false => loading_show = String::from(".."),
-        }
-        let memory_usage = process.memory_info().unwrap().rss() as f64 / (1024.0 * 1024.0); // Memory in MB
-        println!("Memory usage: {:.2} MB", memory_usage);
-        println!("");
+        let _new_controllers: Vec<GameController> = find_controllers();
 
         // Input Handling
-        for controller in controllers {
+        for controller in &controllers {
             // Show in terminal what is connected
             println!("{:?} connected", controller.mac.clone());
 
+            // Copy Controller for the new thread
+            let threaded_controller: GameController = GameController {
+                path: controller.path.clone(),
+                mac: controller.mac.clone(),
+                has_thread: controller.has_thread.clone(),
+            };
+
             // Handle inputs in threads
-            let thread_handle = thread::spawn(move || {
+            let _thread_handle = thread::spawn(move || {
                 read_controller_input();
-                println!("{:?}", controller.mac);
+                println!("{:?}", threaded_controller.mac);
             });
 
             // TODO: Handle that one controller is never being read by two threads
         }
 
-        // wait some time before checking for new devices
-        thread::sleep(Duration::from_secs(2));
+        output_and_wait(&mut loading_show, &process);
     }
+}
+
+fn output_and_wait(loading_show: &mut String, process: &Process) {
+    let _ = Command::new("clear").status();
+    println!("Searching for controllers{loading_show}");
+    match loading_show.len() < 7 {
+        true => loading_show.push('.'),
+        false => *loading_show = String::from(".."),
+    }
+    let memory_usage = process.memory_info().unwrap().rss() as f64 / (1024.0 * 1024.0);
+    // Memory in MB
+    println!("Memory usage: {:.2} MB", memory_usage);
+    println!("");
+
+    // wait some time before checking for new devices
+    thread::sleep(Duration::from_secs(2));
 }
 
 /// Returns all found controllers, might be 0
@@ -97,6 +110,7 @@ fn find_controllers() -> Vec<GameController> {
         let gamecontroller: GameController = GameController {
             path: device_path,
             mac: device_mac,
+            has_thread: false,
         };
         usable_controllers.push(gamecontroller);
     }
