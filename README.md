@@ -14,6 +14,7 @@ I expect there will be some problems as Playstations communicate both ways, but 
  
 # Used hardware
 - Raspberry Pi Zero 2W
+- [Raspberry Sense HAT (not yet)](https://www.raspberrypi.com/products/sense-hat)
 - Emulator stick
   - Connects to PS5 controllers and emulates them as XBOX for Win10 and PS4 for PS4
   - Why don't I just use this?
@@ -24,3 +25,12 @@ I expect there will be some problems as Playstations communicate both ways, but 
 Due to the PS4 problem described in "Used Hardware", the Raspi must be connected to the targeted platform via a USB cable.
 
 Ideally, the Raspi would support a Bluetooth connection to two controllers, processing both inputs and translating them to the platform. For this to work, it may be necessary to connect the Raspi to the platform with two USB cables, so that the platform can recognise two independent controllers.
+
+# Possible Inspirations / Mapping Sources
+- [GP2040](https://github.com/FeralAI/GP2040)
+- [GP2040-CE](https://github.com/OpenStickCommunity/GP2040-CE)
+- [Passing Link](https://github.com/passinglink/passinglink)
+
+Why dont I just use these?
+1. I want to learn how this can be done
+2. Both firmwares dont support PS5 controllers
