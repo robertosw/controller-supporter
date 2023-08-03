@@ -15,12 +15,23 @@
 //      - linux command to compare results: evtest (non-root!)
 
 use psutil::process::Process;
-use std::{path::PathBuf, process, process::Command, thread, time::Duration};
+use std::{
+    path::PathBuf,
+    process,
+    process::Command,
+    thread::{self, JoinHandle},
+    time::Duration,
+};
 
+struct GameControllerSimple {
+    path: PathBuf,
+    mac: String,
+}
 struct GameController {
     path: PathBuf,
     mac: String,
     has_thread: bool,
+    // thread_handle: Option<JoinHandle<()>>,
 }
 
 fn main() {
@@ -29,34 +40,70 @@ fn main() {
     let mut controllers: Vec<GameController> = Vec::new();
 
     loop {
-        let _new_controllers: Vec<GameController> = find_controllers();
+        let new_controllers: Vec<GameControllerSimple> = find_controllers();
+
+        // Check if results of find_controllers contain new controllers
+        for new_ctrl in new_controllers {
+            match controllers.len() {
+                2 => {
+                    // Override the oldest (first connected) controller
+                    if (controllers[0].mac != new_ctrl.mac) && (controllers[1].mac != new_ctrl.mac)
+                    {
+                        controllers[0].path = new_ctrl.path;
+                        controllers[0].mac = new_ctrl.mac;
+                    }
+                }
+                1 => {
+                    // If new_ctrl is not already in controllers, add it
+                    if controllers[0].mac != new_ctrl.mac {
+                        controllers.push(GameController {
+                            path: new_ctrl.path,
+                            mac: new_ctrl.mac,
+                            has_thread: false,
+                        });
+                    }
+                }
+                0 => controllers.push(GameController {
+                    path: new_ctrl.path,
+                    mac: new_ctrl.mac,
+                    has_thread: false,
+                }),
+                _ => (),
+            };
+        }
+
+        output_status(&mut loading_show, &process);
 
         // Input Handling
-        for controller in &controllers {
+        for controller in &mut controllers {
             // Show in terminal what is connected
             println!("{:?} connected", controller.mac.clone());
 
-            // Copy Controller for the new thread
-            let threaded_controller: GameController = GameController {
-                path: controller.path.clone(),
-                mac: controller.mac.clone(),
-                has_thread: controller.has_thread.clone(),
-            };
+            // Create new thread if allowed
+            if controller.has_thread == false {
+                controller.has_thread = true;
 
-            // Handle inputs in threads
-            let _thread_handle = thread::spawn(move || {
-                read_controller_input();
-                println!("{:?}", threaded_controller.mac);
-            });
+                // Copy Controller for the new thread
+                let threaded_controller: GameController = GameController {
+                    path: controller.path.clone(),
+                    mac: controller.mac.clone(),
+                    has_thread: true,
+                };
 
-            // TODO: Handle that one controller is never being read by two threads
+                // Handle inputs in threads
+                let _thread_handle = thread::spawn(move || {
+                    read_controller_input();
+                    println!("{:?}", threaded_controller.mac);
+                });
+            }
         }
 
-        output_and_wait(&mut loading_show, &process);
+        // wait some time before checking for new devices
+        thread::sleep(Duration::from_secs(2));
     }
 }
 
-fn output_and_wait(loading_show: &mut String, process: &Process) {
+fn output_status(loading_show: &mut String, process: &Process) {
     let _ = Command::new("clear").status();
     println!("Searching for controllers{loading_show}");
     match loading_show.len() < 7 {
@@ -67,13 +114,10 @@ fn output_and_wait(loading_show: &mut String, process: &Process) {
     // Memory in MB
     println!("Memory usage: {:.2} MB", memory_usage);
     println!("");
-
-    // wait some time before checking for new devices
-    thread::sleep(Duration::from_secs(2));
 }
 
 /// Returns all found controllers, might be 0
-fn find_controllers() -> Vec<GameController> {
+fn find_controllers() -> Vec<GameControllerSimple> {
     // this was the original from their example.. but the collect is unnecessary??
     // let devices = evdev::enumerate().map(|tuple| tuple.1).collect::<Vec<_>>();
     // purpose of map: results of enumerate are the
@@ -86,7 +130,7 @@ fn find_controllers() -> Vec<GameController> {
     let known_device_names = [String::from("Wireless Controller")];
 
     // (Path in /dev/input/, MAC address of controller)
-    let mut usable_controllers: Vec<GameController> = Vec::new();
+    let mut usable_controllers: Vec<GameControllerSimple> = Vec::new();
 
     // Find which devices could be game controllers
     for device in devices {
@@ -107,10 +151,9 @@ fn find_controllers() -> Vec<GameController> {
             continue;
         }
 
-        let gamecontroller: GameController = GameController {
+        let gamecontroller: GameControllerSimple = GameControllerSimple {
             path: device_path,
             mac: device_mac,
-            has_thread: false,
         };
         usable_controllers.push(gamecontroller);
     }
@@ -119,18 +162,6 @@ fn find_controllers() -> Vec<GameController> {
     // so the second slot is available for a different controller
 
     return usable_controllers;
-
-    // match usable_controllers.len() {
-    //     2.. => {
-    //         return [
-    //             Some(usable_controllers[0].clone()),
-    //             Some(usable_controllers[1].clone()),
-    //         ]
-    //     }
-    //     1 => return [Some(usable_controllers[0].clone()), None],
-    //     0 => return [None, None],
-    //     _ => unreachable!(),
-    // };
 }
 
 fn read_controller_input() {
