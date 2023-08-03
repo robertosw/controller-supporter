@@ -25,11 +25,8 @@ use crate::structs::*;
 use psutil::process::Process;
 use std::{process, process::Command, thread, time::Duration};
 
-// TODO: The same controller is in both slots currently
-// TODO: the collection needs a remove method
-
 fn main() {
-    let mut loading_show: String = String::from("..");
+    let mut loading_show: String = String::from("");
     let process = Process::new(process::id()).unwrap();
     let mut ctrls: GameControllerCollection = GameControllerCollection {
         first: None,
@@ -88,15 +85,14 @@ fn output_info(loading_show: &mut String, process: &Process, ctrls: &GameControl
     let _ = Command::new("clear").status();
 
     // show how if the programm is scanning for controllers or not
-    println!("Searching for controllers{loading_show}");
-    match loading_show.len() < 7 {
+    match loading_show.len() < 10 {
         true => loading_show.push('.'),
         false => loading_show.clear(),
     }
 
     // show memory usage
     let memory_usage = process.memory_info().unwrap().rss() as f64 / (1024.0 * 1024.0);
-    println!("Memory usage: {:.2} MB", memory_usage);
+    println!("Memory usage: {:.2} MB {:}", memory_usage, loading_show);
     println!("");
 
     // Show what is connected

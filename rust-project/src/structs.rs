@@ -86,4 +86,6 @@ impl GameControllerCollection {
             Some(_) => (),
         };
     }
+
+    // TODO: the collection needs a remove method
 }
