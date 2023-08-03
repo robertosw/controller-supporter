@@ -20,6 +20,7 @@ impl GameControllerCollection {
     /// How many controllers are being used?
     pub fn len(&self) -> u8 {
         let mut _count: u8 = 0;
+        println!("count: {_count} ");
 
         match &self.first {
             None => (),
@@ -35,8 +36,8 @@ impl GameControllerCollection {
 
     /// Is this Controller already known?
     pub fn contains(&self, new_ctrl: GameControllerSimple) -> bool {
-        let mut _first_contains: bool;
-        let mut _second_contains: bool;
+        let mut _first_contains: bool = false;
+        let mut _second_contains: bool = false;
 
         match &self.first {
             None => _first_contains = false,
@@ -44,7 +45,6 @@ impl GameControllerCollection {
                 if ctrl.mac == new_ctrl.mac {
                     _first_contains = true;
                 }
-                _first_contains = false;
             }
         };
         match &self.second {
@@ -53,7 +53,6 @@ impl GameControllerCollection {
                 if ctrl.mac == new_ctrl.mac {
                     _second_contains = true;
                 }
-                _second_contains = false;
             }
         };
 

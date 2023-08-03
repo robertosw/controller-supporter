@@ -1,32 +1,23 @@
 use std::path::PathBuf;
 
-use crate::structs::{GameControllerSimple, GameControllerCollection};
+use crate::structs::*;
 
 /// Uses system tools to find controllers in the list of connected devices and adds newly found controllers until the collection is full.
-pub fn get_and_insert_controllers(ctrl_count: &mut u8, ctrls: &mut GameControllerCollection) {
-    if *ctrl_count >= 2 {
-        return;
-    }
-
+pub fn get_and_insert_controllers(ctrls: &mut GameControllerCollection) {
     let new_ctrls: Vec<GameControllerSimple> = get_controllers();
 
     // Check if results of find_controllers contain new controllers
     for new_ctrl in new_ctrls {
         match ctrls.len() {
-            2 => *ctrl_count = 2, // two controllers already connected, nothing else to do
+            2 => (), // two controllers already connected, nothing else to do
             1 => {
-                *ctrl_count = 1;
-
                 // If new_ctrl is not already in controllers, add it
                 match ctrls.contains(new_ctrl.clone()) {
                     false => ctrls.add(new_ctrl.clone()),
                     true => (),
                 }
             }
-            0 => {
-                *ctrl_count = 0;
-                ctrls.add(new_ctrl.clone());
-            }
+            0 => ctrls.add(new_ctrl.clone()),
             _ => (), // do nothing
         };
     }

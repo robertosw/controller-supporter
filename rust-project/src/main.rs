@@ -26,7 +26,6 @@ use psutil::process::Process;
 use std::{process, process::Command, thread, time::Duration};
 
 // TODO: The same controller is in both slots currently
-// TODO: Add a "count" variable to the collection which is updated in add/remove/len
 // TODO: the collection needs a remove method
 
 fn main() {
@@ -36,11 +35,10 @@ fn main() {
         first: None,
         second: None,
     };
-    let mut ctrl_count: u8 = 0;
 
     loop {
-        get_and_insert_controllers(&mut ctrl_count, &mut ctrls);
-        output_info(&mut loading_show, &process, &ctrls, ctrl_count.clone());
+        get_and_insert_controllers(&mut ctrls);
+        output_info(&mut loading_show, &process, &ctrls);
         handle_threads(&mut ctrls);
 
         // wait some time before checking for new devices
@@ -52,7 +50,6 @@ fn main() {
 /// - Creates threads if necessary
 /// - Takes care that no controller is assigned two or more threads
 fn handle_threads(ctrls: &mut GameControllerCollection) {
-
     // Are there any controllers connected?
     match &mut ctrls.first {
         None => (),
@@ -87,28 +84,22 @@ fn handle_threads(ctrls: &mut GameControllerCollection) {
 /// - Show that programm is active with little animation
 /// - Show RAM usage
 /// - Show connected controllers by their mac address
-fn output_info(
-    loading_show: &mut String,
-    process: &Process,
-    ctrls: &GameControllerCollection,
-    ctrl_count: u8,
-) {
+fn output_info(loading_show: &mut String, process: &Process, ctrls: &GameControllerCollection) {
     let _ = Command::new("clear").status();
 
-    match (loading_show.len() < 7) && (ctrl_count < 2) {
-        true => {
-            println!("Searching for controllers{loading_show}");
-            loading_show.push('.');
-        }
-        false => println!("Scanning stopped, disconnect one controller to restart scan"),
+    // show how if the programm is scanning for controllers or not
+    println!("Searching for controllers{loading_show}");
+    match loading_show.len() < 7 {
+        true => loading_show.push('.'),
+        false => loading_show.clear(),
     }
 
+    // show memory usage
     let memory_usage = process.memory_info().unwrap().rss() as f64 / (1024.0 * 1024.0);
-    // Memory in MB
     println!("Memory usage: {:.2} MB", memory_usage);
     println!("");
 
-    // Show in terminal what is connected
+    // Show what is connected
     match &ctrls.first {
         None => (),
         Some(ctrl) => {
