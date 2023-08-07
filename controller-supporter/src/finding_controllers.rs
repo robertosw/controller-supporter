@@ -49,7 +49,7 @@ fn get_controllers() -> Vec<GameControllerSimple> {
         };
 
         if (!known_device_names.contains(&device_name)) || (device_mac.len() != 17) {
-            println!("Device is no controller or mac is not readable");
+            // Device is no controller or the mac address is not readable
             continue;
         }
 

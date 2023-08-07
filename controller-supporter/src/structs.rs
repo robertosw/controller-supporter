@@ -20,7 +20,6 @@ impl GameControllerCollection {
     /// How many controllers are being used?
     pub fn len(&self) -> u8 {
         let mut _count: u8 = 0;
-        println!("count: {_count} ");
 
         match &self.first {
             None => (),
