@@ -6,4 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+hidapi = "2.4.1"
+hidg = "0.1.1"
 rusb = "0.7.0"

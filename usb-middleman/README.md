@@ -84,7 +84,7 @@ In this case the raspi has to support both roles. It has to be the host for the 
 
 Possible rust crates for HID:
 - [hid-io-protocol](https://crates.io/crates/hid-io-protocol/0.1.5) Seems to support both roles
-- [usbd-hid](https://crates.io/crates/usbd-hid) might be too high-level
+<!-- - [usbd-hid](https://crates.io/crates/usbd-hid) too high-level -->
 - [rusb](https://crates.io/crates/rusb) only for reading (being host)
 - [hidapi](https://crates.io/crates/hidapi)
 - [hidg](https://lib.rs/crates/hidg) might only be useful for sending data as client
