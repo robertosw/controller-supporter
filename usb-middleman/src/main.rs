@@ -2,6 +2,7 @@
 
 mod hidapi;
 mod rusb;
+mod hidapi_structs;
 use crate::{hidapi::*, rusb::*};
 
 fn main() {

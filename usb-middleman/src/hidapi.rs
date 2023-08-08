@@ -5,6 +5,7 @@ use std::{
 };
 
 use hidapi::HidApi;
+use crate::hidapi_structs::*;
 
 fn prepare_device() -> hidapi::HidDevice {
     let api = HidApi::new().unwrap();
@@ -34,11 +35,14 @@ fn prepare_device() -> hidapi::HidDevice {
     device
 }
 
+/// modifies the given controller such that the pressed buttons are correctly set
+fn eval_byte_8(controller: &mut UniversalController, byte8: u8) {}
+
 pub fn hidapi() {
     let device = prepare_device();
 
     // prepare for data
-    const HID_ARRAY_SIZE: usize = 18;
+    const HID_ARRAY_SIZE: usize = 14;
     let mut buf = [0 as u8; HID_ARRAY_SIZE];
 
     // prepare benchmark
@@ -65,9 +69,34 @@ pub fn hidapi() {
             Err(_) => continue,
         };
 
-        let stick_left: (u8, u8) = (buf[1], buf[2]);
-        let stick_right: (u8, u8) = (buf[3], buf[4]);
-        let trigger_left: u8 = 0;
+        // first and 8. byte not needed
+        // 13. and 14. byte are some sort of counter, either time or reads
+
+        // example output: [1, 127, 128, 127, 128, 0, 0, 18,  4, 0, 0, 0]
+        // explaination:    ?,  Lx,  Ly,  Rx,  Ry, ?, ?, rng, *, #, ~,
+
+        let controller: UniversalController = UniversalController {
+            sticks: Sticks {
+                left: Stick {
+                    x: buf[1],
+                    y: buf[2],
+                    pressed: false,
+                },
+                right: Stick {
+                    x: buf[3],
+                    y: buf[4],
+                    pressed: false,
+                },
+            },
+            triggers: Triggers {
+                left: buf[5],
+                right: buf[6],
+            },
+            bumpers: Bumpers ::allfalse(),
+            buttons: MainButtons::allfalse(),
+            specials: SpecialButtons::allfalse(),
+        };
+
         benchm_durations[benchm_index] = benchmark.elapsed();
         benchm_average = benchm_durations.iter().sum::<Duration>() / benchm_durations.len() as u32;
         benchm_index = (benchm_index + 1) % BENCHMARK_SAMPLES;
@@ -76,23 +105,14 @@ pub fn hidapi() {
         let _ = Command::new("clear").status();
         println!("avg execution time: {:?}", benchm_average);
 
-        println!("{:?}", &buf[5..valid_bytes_count]);
-        println!("Lx: {:?}", stick_left.0);
-        println!("Ly: {:?}", stick_left.1);
-        println!("Rx: {:?}", stick_right.0);
-        println!("Ry: {:?}", stick_right.1);
+        println!("{:?}", &buf[8..valid_bytes_count]);
+        println!("Lx: {:?}", controller.sticks.left.x);
+        println!("Ly: {:?}", controller.sticks.left.y);
+        println!("Rx: {:?}", controller.sticks.right.x);
+        println!("Ry: {:?}", controller.sticks.right.y);
+        println!("Tl: {:?}", controller.triggers.left);
+        println!("Tr: {:?}", controller.triggers.right);
 
         thread::sleep(Duration::from_micros(1500)); // the lower this can be, the better the delay
     }
-
-    // example output: [1, 127, 128, 127, 128, 0, 0, 18,  4, 0, 0, 0]
-    // explaination:    ?,  Lx,  Ly,  Rx,  Ry, ?, ?, rng, *, #, ~,
-    //  * is a simple code for which key is pressed
-    //      40 is the X Button
-    //      72 is the O Button
-    //      104  is O and X together
-    //  #
-    //
-    //  ~
-    //      2 = touchpad pressed in
 }
