@@ -61,7 +61,7 @@ pub fn rusb() {
 
         let _max_packet_size: u8 = descriptor.max_packet_size();
 
-        let address = gpad.address();
+        let _address = gpad.address();
 
         const REPORT_SIZE: usize = 8; // Change this to match the report size of your HID device
 
