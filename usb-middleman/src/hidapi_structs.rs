@@ -2,6 +2,7 @@ pub struct UniversalController {
     pub sticks: Sticks,
     pub triggers: Triggers,
     pub bumpers: Bumpers,
+    pub dpad: DPad,
     pub buttons: MainButtons,
     pub specials: SpecialButtons,
 }
@@ -26,11 +27,24 @@ impl Bumpers {
     }
 }
 
+pub struct DPad {
+    pub up: bool,
+    pub down: bool,
+    pub left: bool,
+    pub right: bool,
+}
+impl DPad {
+    pub fn allfalse() -> Self {
+        Self {
+            up: false,
+            down: false,
+            left: false,
+            right: false,
+        }
+    }
+}
+
 pub struct MainButtons {
-    pub dpad_up: bool,
-    pub dpad_down: bool,
-    pub dpad_left: bool,
-    pub dpad_right: bool,
     pub upper: bool,
     pub lower: bool,
     pub left: bool,
@@ -39,10 +53,6 @@ pub struct MainButtons {
 impl MainButtons {
     pub fn allfalse() -> Self {
         Self {
-            dpad_up: false,
-            dpad_down: false,
-            dpad_left: false,
-            dpad_right: false,
             upper: false,
             lower: false,
             left: false,
