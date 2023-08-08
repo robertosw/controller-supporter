@@ -1,3 +1,7 @@
+// NOTE
+// This create doesnt seem to work for what I tried to achieve because the required
+// parameters for handle.read_interrupt() cant be optained from the use of this crate alone
+
 use rusb::{Context, Device, DeviceDescriptor, DeviceHandle, DeviceList, UsbContext};
 
 fn _find_supported_gamepads() -> Result<Vec<Device<Context>>, String> {
@@ -41,7 +45,7 @@ fn _find_supported_gamepads() -> Result<Vec<Device<Context>>, String> {
     return Ok(found_gpads);
 }
 
-pub fn rusb() {
+pub fn main() {
     let found_gpads: Vec<Device<Context>>;
 
     match _find_supported_gamepads() {

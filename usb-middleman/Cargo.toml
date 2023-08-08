@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 hidapi = "2.4.1"
-rusb = "0.7.0"
+

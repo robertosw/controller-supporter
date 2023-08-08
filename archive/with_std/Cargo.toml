@@ -1,10 +1,11 @@
 [package]
-name = "usb-middleman"
+name = "controller-supporter"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-hidapi = "2.4.1"
+evdev = "0.12.1"
+psutil = "3.2.2"
 

@@ -1,53 +1,11 @@
 use std::{
-    process::{Command, exit},
+    process::{exit, Command},
     thread,
     time::{Duration, Instant},
 };
 
-use crate::hidapi_structs::*;
-use hidapi::HidApi;
-
-fn prepare_device() -> hidapi::HidDevice {
-    let api = HidApi::new().unwrap();
-
-    let mut vid: u16 = 0;
-    let mut pid: u16 = 0;
-
-    // Print out information about all connected devices
-    for device in api.device_list() {
-
-        // Sony is 1356
-        if device.vendor_id() == 1356 {
-            println!("{:#?}", device);
-            vid = 1356;
-            pid = device.product_id();
-
-            // FIXME: The functions so far only work if connected via usb, 
-            // testing is needed to see how that can be generalized
-
-            println!("bus type {:?}", device.bus_type());
-            println!("interface nr {:?}", device.interface_number());
-            println!("product {:?}", device.product_string());
-            println!("release {:?}", device.release_number());
-            println!("usage {:?}", device.usage());
-            println!("usage page {:?}", device.usage_page());
-        }
-    }
-
-    exit(0);
-
-    let device = match api.open(vid, pid) {
-        Ok(hid_device) => hid_device,
-        Err(err) => panic!("Error: {:?}", err),
-    };
-
-    // if false, calls to read may return nothing, but also dont block
-    match device.set_blocking_mode(false) {
-        Ok(_) => (),
-        Err(err) => panic!("HidError: {:?}", err),
-    }
-    device
-}
+use crate::structs::*;
+use hidapi::{HidApi, HidDevice};
 
 /// modifies the given controller such that the pressed buttons (xyab for xbox) and dpad buttons are correctly set
 fn eval_byte_8(controller: &mut UniversalController, byte8: u8) {
@@ -162,7 +120,7 @@ fn terminal_output(
     let _ = Command::new("clear").status();
 
     if show_benchmark {
-        println!("avg execution time: {:?}", benchm_average);
+        println!("avg execution time: {:.0?}", benchm_average);
     }
 
     if show_all_keys {
@@ -191,8 +149,14 @@ fn terminal_output(
     }
 }
 
-pub fn hidapi() {
-    let device = prepare_device();
+// FIXME: The functions so far only work if connected via usb,
+// testing is needed to see how that can be generalized
+pub fn read_ps5_usb(device: &HidDevice) {
+    // if false, calls to read may return nothing, but also dont block
+    match device.set_blocking_mode(false) {
+        Ok(_) => (),
+        Err(err) => panic!("HidError: {:?}", err),
+    }
 
     // prepare for data
     const HID_ARRAY_SIZE: usize = 14;
@@ -235,6 +199,6 @@ pub fn hidapi() {
         // Output if wanted
         terminal_output(benchm_average, controller, true, true);
 
-        thread::sleep(Duration::from_micros(1500)); // the lower this can be, the better the delay
+        thread::sleep(Duration::from_micros(1500)); // <= 1500 is fine for now delay
     }
 }

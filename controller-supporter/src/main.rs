@@ -1,111 +1,57 @@
-//  build standalone binary for raspi:
-// Tier 1 (guaranteed to work):     cargo build --target aarch64-unkown-linux-gnu           added to project
-// Tier 2 (guaranteed to build):    cargo build --target armv7-unknown-linux-gnueabihf      added to project
-// Tier 2                           cargo build --target armv7-unknown-linux-gnueabihf      not yet added to project, has linux kernel 4.15, instead of the v3.2 the option above has
-// https://doc.rust-lang.org/nightly/rustc/platform-support.html
-// Raspi Zero 2W has a 64-bit Arm Cortex-A53, which is ARMv8 64bit.. so the Tier 1 option should work
+#![allow(unused_imports, dead_code)]
 
-// Steps:
-//  1. Connect Controller
-//      - that is in pairing mode
-//      - scan for controllers already known to the system
-//  2. Read Controller Input
-//      2.1 Find Controller(s) in list of devices
-//      2.2 Read inputs (maybe two controllers can be multithreaded)
-//      - linux command to compare results: evtest (non-root!)
-
-mod finding_controllers;
-mod read_input;
+mod read_ps5_usb;
 mod structs;
+use std::process::exit;
 
-use crate::finding_controllers::*;
-use crate::read_input::*;
-use crate::structs::*;
+use ::hidapi::{BusType, HidApi, HidDevice};
 
-use psutil::process::Process;
-use std::{process, process::Command, thread, time::Duration};
+use crate::read_ps5_usb::*;
 
 fn main() {
-    let mut loading_show: String = String::from("");
-    let process = Process::new(process::id()).unwrap();
-    let mut ctrls: GameControllerCollection = GameControllerCollection {
-        first: None,
-        second: None,
-    };
+    let api = HidApi::new().unwrap();
 
-    loop {
-        get_and_insert_controllers(&mut ctrls);
-        output_info(&mut loading_show, &process, &ctrls);
-        handle_threads(&mut ctrls);
+    // Print out information about all connected devices
+    for device in api.device_list() {
+        let vendor_id: u16 = device.vendor_id();
+        let bus_type: BusType = device.bus_type();
 
-        // wait some time before checking for new devices
-        thread::sleep(Duration::from_secs(2));
-    }
-}
-
-/// - Checks the thread handle to see if all controllers have running threads
-/// - Creates threads if necessary
-/// - Takes care that no controller is assigned two or more threads
-fn handle_threads(ctrls: &mut GameControllerCollection) {
-    // Are there any controllers connected?
-    match &mut ctrls.first {
-        None => (),
-        Some(ctrl) => _create_new_thread(ctrl),
-    }
-    match &mut ctrls.second {
-        None => (),
-        Some(ctrl) => _create_new_thread(ctrl),
-    }
-
-    // Create one thread per controller
-    fn _create_new_thread(controller: &mut GameController) {
-        match controller.thread_handle {
-            None => {
-                // Copy Controller for the new thread
-                let threaded_controller: GameControllerSimple = GameControllerSimple {
-                    path: controller.path.clone(),
-                    mac: controller.mac.clone(),
-                };
-
-                // Create thread and link it in collection
-                controller.thread_handle = Some(thread::spawn(move || {
-                    read_controller_input(threaded_controller);
-                }));
+        // Check if device is supported
+        match bus_type {
+            BusType::Usb => {
+                if vendor_id != 1356 {
+                    // Sony is 1356
+                    continue;
+                }
             }
-            Some(_) => (),
+            BusType::Bluetooth => {
+                println!("Bluetooth is not yet supported");
+                println!("Device name {:?}", device.product_string());
+                continue;
+            }
+            _ => continue,
         };
+
+        println!("bus type {:?}", device.bus_type());
+        println!("interface nr {:?}", device.interface_number());
+        println!("product {:?}", device.product_string());
+        println!("release {:?}", device.release_number());
+        println!("usage {:?}", device.usage());
+        println!("usage page {:?}", device.usage_page());
+
+        println!("{:#?}", device);
+
+        let vid: u16 = 1356;
+        let pid: u16 = device.product_id();
+
+        let open_device = match api.open(vid, pid) {
+            Ok(hid_device) => hid_device,
+            Err(err) => panic!("Error: {:?}", err),
+        };
+
+        read_ps5_usb(&open_device);
     }
 }
 
-/// Output Information to Terminal <br>
-/// - Show that programm is active with little animation
-/// - Show RAM usage
-/// - Show connected controllers by their mac address
-fn output_info(loading_show: &mut String, process: &Process, ctrls: &GameControllerCollection) {
-    let _ = Command::new("clear").status();
-
-    // show how if the programm is scanning for controllers or not
-    match loading_show.len() < 10 {
-        true => loading_show.push('.'),
-        false => loading_show.clear(),
-    }
-
-    // show memory usage
-    let memory_usage = process.memory_info().unwrap().rss() as f64 / (1024.0 * 1024.0);
-    println!("Memory usage: {:.2} MB {:}", memory_usage, loading_show);
-    println!("");
-
-    // Show what is connected
-    match &ctrls.first {
-        None => (),
-        Some(ctrl) => {
-            println!("{:?} connected", ctrl.mac.clone());
-        }
-    }
-    match &ctrls.second {
-        None => (),
-        Some(ctrl) => {
-            println!("{:?} connected", ctrl.mac.clone());
-        }
-    }
-}
+// Terminal 1: .../controller-supporter/usb-middleman$                  clear && cargo build --release
+// Terminal 2: .../controller-supporter/usb-middleman/target/release$   clear && sudo chown root usb-middleman && sudo chmod u+s usb-middleman && ./usb-middleman

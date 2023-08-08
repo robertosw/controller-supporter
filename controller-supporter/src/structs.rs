@@ -1,90 +1,91 @@
-use std::{path::PathBuf, thread::JoinHandle};
-
-#[derive(Clone)]
-pub struct GameControllerSimple {
-    pub path: PathBuf,
-    pub mac: String,
+pub struct UniversalController {
+    pub sticks: Sticks,
+    pub triggers: Triggers,
+    pub bumpers: Bumpers,
+    pub dpad: DPad,
+    pub buttons: MainButtons,
+    pub specials: SpecialButtons,
+}
+pub struct Sticks {
+    pub left: Stick,
+    pub right: Stick,
+}
+pub struct Triggers {
+    pub left: u8,
+    pub right: u8,
+}
+pub struct Bumpers {
+    pub left: bool,
+    pub right: bool,
+}
+impl Bumpers {
+    pub fn allfalse() -> Self {
+        Self {
+            left: false,
+            right: false,
+        }
+    }
 }
 
-pub struct GameController {
-    pub path: PathBuf,
-    pub mac: String,
-    pub thread_handle: Option<JoinHandle<()>>,
+pub struct DPad {
+    pub up: bool,
+    pub down: bool,
+    pub left: bool,
+    pub right: bool,
+}
+impl DPad {
+    pub fn allfalse() -> Self {
+        Self {
+            up: false,
+            down: false,
+            left: false,
+            right: false,
+        }
+    }
 }
 
-pub struct GameControllerCollection {
-    pub first: Option<GameController>,
-    pub second: Option<GameController>,
+pub struct MainButtons {
+    pub upper: bool,
+    pub lower: bool,
+    pub left: bool,
+    pub right: bool,
 }
-impl GameControllerCollection {
-    /// How many controllers are being used?
-    pub fn len(&self) -> u8 {
-        let mut _count: u8 = 0;
-
-        match &self.first {
-            None => (),
-            Some(_) => _count += 1,
-        };
-        match &self.second {
-            None => (),
-            Some(_) => _count += 1,
-        };
-
-        return _count;
+impl MainButtons {
+    pub fn allfalse() -> Self {
+        Self {
+            upper: false,
+            lower: false,
+            left: false,
+            right: false,
+        }
     }
+}
 
-    /// Is this Controller already known?
-    pub fn contains(&self, new_ctrl: GameControllerSimple) -> bool {
-        let mut _first_contains: bool = false;
-        let mut _second_contains: bool = false;
+pub struct SpecialButtons {
+    pub touchpad: bool,
 
-        match &self.first {
-            None => _first_contains = false,
-            Some(ctrl) => {
-                if ctrl.mac == new_ctrl.mac {
-                    _first_contains = true;
-                }
-            }
-        };
-        match &self.second {
-            None => _second_contains = false,
-            Some(ctrl) => {
-                if ctrl.mac == new_ctrl.mac {
-                    _second_contains = true;
-                }
-            }
-        };
+    /// menu button
+    pub right: bool,
 
-        return _first_contains || _second_contains;
+    /// Share button for PS Controllers
+    pub left: bool,
+
+    /// PS-Button or XBOX Button
+    pub logo: bool,
+}
+impl SpecialButtons {
+    pub fn allfalse() -> Self {
+        Self {
+            touchpad: false,
+            right: false,
+            left: false,
+            logo: false,
+        }
     }
+}
 
-    /// WARNING: If the collection is already full, nothing will be changed <br>
-    /// Adds the given controller to the collection in the top most place
-    pub fn add(&mut self, new_ctrl: GameControllerSimple) {
-        match &self.first {
-            None => {
-                self.first = Some(GameController {
-                    path: new_ctrl.path,
-                    mac: new_ctrl.mac,
-                    thread_handle: None,
-                });
-                return;
-            }
-            Some(_) => (),
-        };
-
-        match &self.second {
-            None => {
-                self.second = Some(GameController {
-                    path: new_ctrl.path,
-                    mac: new_ctrl.mac,
-                    thread_handle: None,
-                });
-                return;
-            }
-            Some(_) => (),
-        };
-    }
-
-    // TODO: the collection needs a remove method
+pub struct Stick {
+    pub x: u8,
+    pub y: u8,
+    pub pressed: bool,
 }
