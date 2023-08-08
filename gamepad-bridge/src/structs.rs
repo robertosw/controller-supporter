@@ -1,4 +1,4 @@
-pub struct UniversalController {
+pub struct UniversalGamepad {
     pub sticks: Sticks,
     pub triggers: Triggers,
     pub bumpers: Bumpers,

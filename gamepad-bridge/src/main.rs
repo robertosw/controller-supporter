@@ -53,5 +53,5 @@ fn main() {
     }
 }
 
-// Terminal 1: .../controller-supporter/usb-middleman$                  clear && cargo build --release
-// Terminal 2: .../controller-supporter/usb-middleman/target/release$   clear && sudo chown root usb-middleman && sudo chmod u+s usb-middleman && ./usb-middleman
+// Terminal 1: .../gamepad-bridge/gamepad-bridge$                  clear && cargo build --release
+// Terminal 2: .../gamepad-bridge/gamepad-bridge/target/release$   clear && sudo chown root gamepad-bridge && sudo chmod u+s gamepad-bridge && ./gamepad-bridge
