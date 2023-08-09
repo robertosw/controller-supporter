@@ -8,6 +8,8 @@ use ::hidapi::{BusType, HidApi, HidDevice};
 
 use crate::read_ps5_usb::*;
 
+// TODO BT connection and scanning 
+
 fn main() {
     let api = HidApi::new().unwrap();
 
@@ -25,6 +27,7 @@ fn main() {
                 }
             }
             BusType::Bluetooth => {
+                // TODO Rewrite function below to support BT and both gamepads
                 println!("Bluetooth is not yet supported");
                 println!("Device name {:?}", device.product_string());
                 continue;
