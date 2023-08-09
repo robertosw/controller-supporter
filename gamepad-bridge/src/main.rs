@@ -8,9 +8,12 @@ use ::hidapi::{BusType, HidApi, HidDevice};
 
 use crate::read_ps5_usb::*;
 
-// TODO BT connection and scanning 
+// TODO BT connection and scanning
 
 fn main() {
+    println!("started");
+
+    // TODO Handle this correctly, the program ends here on raspi
     let api = HidApi::new().unwrap();
 
     // Print out information about all connected devices
