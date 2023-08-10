@@ -3,7 +3,7 @@ FROM --platform=linux/arm64 rust:latest
 # Install all required system tools
   RUN apt update && apt upgrade -y
   RUN apt install -y g++-aarch64-linux-gnu libc6-dev-arm64-cross
-  RUN apt install libudev-dev libsystemd-dev  
+  RUN apt install -y libudev-dev libsystemd-dev libdbus-1-dev
   # ^ support for the hidapi crate
 
 

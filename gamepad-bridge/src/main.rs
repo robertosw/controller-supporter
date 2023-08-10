@@ -4,12 +4,17 @@ use hidapi::HidApi;
 use std::process::exit;
 
 mod hidapi_fn;
-mod hidapi_structs;
 mod hidapi_read_ps5_usb;
-use crate::hidapi_fn::find_supported_gamepads;
+mod hidapi_structs;
+mod bluetooth;
+
+use crate::hidapi_fn::*;
+use crate::bluetooth::*;
 
 fn main() {
     println!("\n Gamepad-Bridge started");
+
+    bluetooth();
 
     let api = match HidApi::new() {
         Ok(api) => api,
