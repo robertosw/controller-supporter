@@ -1,4 +1,9 @@
-use std::{process::{exit, Command, Stdio}, io::{BufReader, SeekFrom, Seek, BufRead, Write}, fs::OpenOptions};
+use std::{
+    fs::OpenOptions,
+    io::{BufRead, BufReader, Seek, SeekFrom, Write},
+    process::{exit, Command, Stdio},
+    sync::{Arc, Mutex},
+};
 
 // --------- bluetooth handling ---------
 
@@ -28,13 +33,10 @@ use std::{process::{exit, Command, Stdio}, io::{BufReader, SeekFrom, Seek, BufRe
 
 /// turn bluetoothctl scanning on and write output without buffering into file with param `output_file_name` <br>
 /// If no error is occured, function never ends. Should be run in seperate thread
-pub fn bt_scan_on(output_file_name: String) {
-    // TODO: Even if this command fails, this function should never return so that the thread will always scan
-
-    let _status_del_file = Command::new("rm")
-        .arg(output_file_name.clone())
-        .status()
-        .unwrap();
+pub fn bt_scan_on(scan_output: Arc<Mutex<Vec<String>>>, request_scan_stop: Arc<Mutex<bool>>) {
+    // TODO make bt_scan_on stoppable
+    // If they already share memory, the function could check with every read line
+    // if a bool is true or false and stop scanning and return
 
     // start scanning for devices
     let child_cmd = match Command::new("stdbuf")
@@ -54,23 +56,17 @@ pub fn bt_scan_on(output_file_name: String) {
     let stdout = BufReader::new(child_cmd.stdout.expect("Failed to capture stdout"));
     let stderr = BufReader::new(child_cmd.stderr.expect("Failed to capture stderr"));
 
-    let mut file = OpenOptions::new()
-        .append(true)
-        .create_new(true)
-        .open(output_file_name)
-        .unwrap();
-
-    let _fp_pos_from_start = file.seek(SeekFrom::End(0)).unwrap();
-
     // UNLESS bluetoothctl fails at some point in time, this for loop is never left,
     // because bluetoothctl scan on never ends sucessfully on its own
     for line in stdout.lines() {
         match line {
-            Ok(mut line) => {
+            Ok(line) => {
                 println!("Output out: {}", line);
-
-                line.push('\n');
-                let _written_bytes = file.write_all(line.as_bytes()).unwrap();
+                {
+                    let mut scan_output_locked = scan_output.lock().unwrap();
+                    scan_output_locked.push(line);
+                    // locks are released after a block goes out of sope
+                }
             }
             Err(err) => println!("Error out: {}", err),
         }
@@ -84,7 +80,6 @@ pub fn bt_scan_on(output_file_name: String) {
         }
     }
 }
-
 
 /// turns bluetooth on
 pub fn bt_power_on() {

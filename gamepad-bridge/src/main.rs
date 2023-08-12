@@ -2,6 +2,10 @@
 
 use hidapi::HidApi;
 use std::process::exit;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::thread;
+use std::time::Duration;
 
 mod bluetooth_fn;
 mod hidapi_fn;
@@ -23,7 +27,40 @@ fn main() {
     //     -> threads dont have to know from each others existence (maybe for usb output, but we'll see)
 
     bt_power_on();
-    bt_scan_on(String::from("bt_scan_out"));
+
+    // bt scanning
+    let scan_output: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+    let request_scan_stop: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
+
+    // spawn new thread
+    let scan_clone = scan_output.clone();
+    let request_scan_stop_clone = request_scan_stop.clone();
+    let _handle = thread::spawn(move || bt_scan_on(scan_clone, request_scan_stop_clone));
+
+    // use scanning data
+    loop {
+        let mut _output_clone: Vec<String> = Vec::new();
+        
+        // copy data from shared memory
+        {
+            // always unwrap after calling lock.
+            // If lock fails, this thread should panic because the other thread is in a deadlock
+            let mut scan_output_locked = scan_output.lock().unwrap();
+            _output_clone = scan_output_locked.clone();
+            scan_output_locked.clear();
+
+            // locks are released after a block goes out of sope
+        }
+        
+        // check if anything new was added and do something with it
+        for line in _output_clone {
+            println!("Output in main: {:?}", line);
+        }
+
+        thread::sleep(Duration::from_millis(500));
+    }
+
+    _handle.join().unwrap(); // dont exit main without waiting for the thread to end
 }
 
 fn hidapi_starter() {
