@@ -20,7 +20,7 @@ mkdir ./aarch64build/release
 mkdir ./aarch64build/debug
 docker cp rustcont:/gamepad-bridge/target/release/gamepad-bridge ./aarch64build/release/gamepad-bridge
 docker cp rustcont:/gamepad-bridge/target/debug/gamepad-bridge ./aarch64build/debug/gamepad-bridge
-docker rm rustcont
+# docker rm rustcont
 
 echo
 echo "project compiled, transfering to raspi"
