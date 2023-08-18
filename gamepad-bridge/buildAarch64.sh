@@ -10,7 +10,6 @@ echo "creating local folders"
 echo
 mkdir ./aarch64build/
 mkdir ./aarch64build/target
-mkdir ./aarch64build/target/release
 
 echo
 echo "building image for linux/arm64"
@@ -26,8 +25,7 @@ docker run -it --platform linux/arm64 --name rustcont rustarm64
 # from here, container finished its CMD
 # copy from container to local
 docker cp rustcont:/gamepad-bridge/target/release/gamepad-bridge    ./aarch64build/gamepad-bridge
-docker cp rustcont:/gamepad-bridge/target/release/deps/  ./aarch64build/target/release/deps/
-docker cp rustcont:/gamepad-bridge/target/release/build/ ./aarch64build/target/release/build/
+docker cp rustcont:/gamepad-bridge/target/  ./aarch64build/
 docker rm rustcont
 
 echo

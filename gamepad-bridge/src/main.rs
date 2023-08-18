@@ -21,7 +21,7 @@ use crate::bluetooth_fn::*;
 use crate::hidapi_fn::*;
 
 fn main() {
-    println!("\n Gamepad-Bridge started");
+    println!("\nGamepad-Bridge started: v0.3\n");
 
     // Ideas for program flow
     // 1. the whole procedure (BT finding, input read, output to usb) is being duplicated for each player right inside main. So 1-4 threads
