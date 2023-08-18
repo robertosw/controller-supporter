@@ -1,11 +1,8 @@
 use std::{
-    fs::OpenOptions,
-    io::{BufRead, BufReader, Seek, SeekFrom, Write},
-    os::fd::AsFd,
-    process::{exit, ChildStdout, Command, Stdio},
+    io::{BufRead, BufReader},
+    process::{exit, Command, Stdio},
     sync::{Arc, Mutex},
     thread,
-    time::Duration,
 };
 
 // --------- bluetooth handling ---------

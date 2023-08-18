@@ -2,13 +2,10 @@
 
 use ctrlc::set_handler;
 use hidapi::HidApi;
-use regex::Regex;
-use std::ops::ControlFlow;
 use std::process::exit;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
@@ -59,10 +56,6 @@ fn main() {
 
     thread_handle.join().unwrap();
 }
-
-
-
-
 
 fn hidapi_starter() {
     let api = match HidApi::new() {

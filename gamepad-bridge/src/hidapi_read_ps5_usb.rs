@@ -1,11 +1,11 @@
 use std::{
-    process::{exit, Command},
+    process::Command,
     thread,
     time::{Duration, Instant},
 };
 
 use crate::hidapi_structs::*;
-use hidapi::{HidApi, HidDevice};
+use hidapi::HidDevice;
 
 /// modifies the given gamepad such that the pressed buttons (xyab for xbox) and dpad buttons are correctly set
 fn eval_byte_8(gamepad: &mut UniversalGamepad, byte8: u8) {

@@ -1,4 +1,4 @@
-use ::hidapi::{BusType, HidApi, HidDevice};
+use ::hidapi::{BusType, HidApi};
 use hidapi::DeviceInfo;
 use std::process::exit;
 
