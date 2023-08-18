@@ -1,8 +1,11 @@
 use std::{
     fs::OpenOptions,
     io::{BufRead, BufReader, Seek, SeekFrom, Write},
-    process::{exit, Command, Stdio},
+    os::fd::AsFd,
+    process::{exit, ChildStdout, Command, Stdio},
     sync::{Arc, Mutex},
+    thread,
+    time::Duration,
 };
 
 // --------- bluetooth handling ---------
@@ -31,13 +34,21 @@ use std::{
 //     trust <mac>     trust this gamepad, so that it will be connected automatically in the future
 //     pairable off
 
+/// calling `thread_handle.join()` on this thread terminates the  `bluetoothctl scan on` command
+/// so the for loop inside this function is left and the function return smoothly
+pub fn bt_scan_on_threaded() -> (Arc<Mutex<Vec<String>>>, thread::JoinHandle<()>) {
+    let scan_output: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+
+    // spawn new thread
+    let scan_clone = scan_output.clone();
+    let handle = thread::spawn(move || bt_scan_on_thread(scan_clone));
+
+    return (scan_output, handle);
+}
+
 /// turn bluetoothctl scanning on and write output without buffering into file with param `output_file_name` <br>
 /// If no error is occured, function never ends. Should be run in seperate thread
-pub fn bt_scan_on(scan_output: Arc<Mutex<Vec<String>>>, request_scan_stop: Arc<Mutex<bool>>) {
-    // TODO make bt_scan_on stoppable
-    // If they already share memory, the function could check with every read line
-    // if a bool is true or false and stop scanning and return
-
+fn bt_scan_on_thread(scan_output: Arc<Mutex<Vec<String>>>) {
     // start scanning for devices
     let child_cmd = match Command::new("stdbuf")
         .args(["-o0", "bluetoothctl", "scan", "on"])
@@ -61,7 +72,7 @@ pub fn bt_scan_on(scan_output: Arc<Mutex<Vec<String>>>, request_scan_stop: Arc<M
     for line in stdout.lines() {
         match line {
             Ok(line) => {
-                println!("Output out: {}", line);
+                println!("Output  out: {}", line);
                 {
                     let mut scan_output_locked = scan_output.lock().unwrap();
                     scan_output_locked.push(line);
@@ -79,6 +90,15 @@ pub fn bt_scan_on(scan_output: Arc<Mutex<Vec<String>>>, request_scan_stop: Arc<M
             Err(err) => println!("Error err: {}", err),
         }
     }
+
+    // This part is always reached as long as this thread is terminated by .join()
+
+    // This always returns an error, so its currently useless
+    // let scan_off = match Command::new("bluetoothctl").args(["scan", "off"]).output() {
+    //     Ok(output) => output,
+    //     Err(_) => return,
+    // };
+    // println!("{:?}", scan_off);
 }
 
 /// turns bluetooth on
