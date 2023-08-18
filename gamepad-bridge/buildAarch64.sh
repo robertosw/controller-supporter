@@ -6,6 +6,13 @@
 # https://github.com/cross-rs/cross/tree/main
 
 clear
+echo "creating local folders"
+echo
+mkdir ./aarch64build/
+mkdir ./aarch64build/target
+mkdir ./aarch64build/target/release
+
+echo
 echo "building image for linux/arm64"
 echo
 docker build --platform linux/arm64 -t rustarm64 .
@@ -15,12 +22,13 @@ echo "running container for linux/arm64"
 echo
 
 docker run -it --platform linux/arm64 --name rustcont rustarm64
-mkdir ./aarch64build/
-mkdir ./aarch64build/release
-mkdir ./aarch64build/debug
-docker cp rustcont:/gamepad-bridge/target/release/gamepad-bridge ./aarch64build/release/gamepad-bridge
-docker cp rustcont:/gamepad-bridge/target/debug/gamepad-bridge ./aarch64build/debug/gamepad-bridge
-# docker rm rustcont
+
+# from here, container finished its CMD
+# copy from container to local
+docker cp rustcont:/gamepad-bridge/target/release/gamepad-bridge    ./aarch64build/gamepad-bridge
+docker cp rustcont:/gamepad-bridge/target/release/deps/  ./aarch64build/target/release/deps/
+docker cp rustcont:/gamepad-bridge/target/release/build/ ./aarch64build/target/release/build/
+docker rm rustcont
 
 echo
 echo "project compiled, transfering to raspi"

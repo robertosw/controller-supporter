@@ -12,8 +12,11 @@ FROM --platform=linux/arm64 rust:latest
   RUN cd /
   RUN mkdir gamepad-bridge 
 
+  # copy from local into container
   COPY src /gamepad-bridge/src
   COPY Cargo.toml /gamepad-bridge/
+  COPY aarch64build/target /gamepad-bridge/target
+  # ^ this speeds up build times, no rebuild needed
 
   WORKDIR /gamepad-bridge/
 
