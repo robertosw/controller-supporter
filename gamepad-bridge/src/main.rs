@@ -9,16 +9,61 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
+use hidg::{Class, Device, Key, Keyboard, Led, StateChange};
+
 mod bluetooth_fn;
 mod hidapi_fn;
 mod hidapi_read_ps5_usb;
 mod hidapi_structs;
+mod usb_gadget;
 
 use crate::bluetooth_fn::*;
 use crate::hidapi_fn::*;
 
+// libusb   udeavadm monitor       minicom
+
 fn main() {
     println!("\nGamepad-Bridge started: v0.3\n");
+
+
+    let mut device = Device::<Keyboard>::open("/dev/hidg0").unwrap(); // open device
+
+    // Create input report
+    let mut input = Keyboard.input();
+
+    // Press left ctrl modifier
+    input.press_key(Key::LeftCtrl);
+
+    // Press key 'A'
+    input.press_key(Key::A);
+
+    // Send input report
+    device.input(&input).unwrap();
+
+    // Get pressed keys
+    println!("Keys: {:?}", input.pressed().collect::<Vec<Key>>());
+
+    // Release left ctrl modifier
+    input.release_key(Key::LeftCtrl);
+
+    // Release key 'A'
+    input.release_key(Key::A);
+
+    // Send input report
+    device.input(&input).unwrap();
+
+    // Create output report
+    let mut output = Keyboard.output();
+
+    // Receive output report
+    device.output(&mut output).unwrap();
+
+    // Print lit LEDs
+    println!("LEDs: {:?}", output.lit().collect::<Vec<Led>>());
+
+    // hier könnte man vielleicht einfach den usbbus von linux nehmen, anscheinend bietet die rusb crate das
+
+    // oder ansonsten kann man vielleicht einfach eins der /dev/tty als device annehmen...
 
     // Ideas for program flow
     // 1. the whole procedure (BT finding, input read, output to usb) is being duplicated for each player right inside main. So 1-4 threads
@@ -42,8 +87,6 @@ fn main() {
     };
 
     bt_power_on();
-
-    // scanning in new thread
     let (shared_mem_scan_output, thread_handle) = bt_scan_on_threaded();
 
     // find new controllers
