@@ -54,8 +54,11 @@ pub fn bt_power_on() {
     println!("Stderr: {:?}", stderr);
 }
 
-/// calling `thread_handle.join()` on this thread terminates the  `bluetoothctl scan on` command
-/// so the for loop inside this function is left and the function return smoothly
+/// Spawn a new thread to scan for bluetooth devices using the terminal command `bluetoothctl scan on` <br>
+/// Calling `thread_handle.join()` on this thread terminates the `bluetoothctl scan on` command before ending this thread
+///
+/// 1. Return Value: As soon as `bluetoothctl scan on` outputs a new line, it will be written into the `Arc<Mutex<Vec<String>>>`
+/// 2. Return Value: `thread::JoinHandle<()>` The thread handle
 pub fn bt_scan_on_threaded() -> (Arc<Mutex<Vec<String>>>, thread::JoinHandle<()>) {
     let scan_output: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
 
@@ -66,7 +69,10 @@ pub fn bt_scan_on_threaded() -> (Arc<Mutex<Vec<String>>>, thread::JoinHandle<()>
     return (scan_output, handle);
 }
 
-/// Scan the given output of `bluetoothctl scan on` for yet unknown gamepads
+/// Search the given output of `bluetoothctl scan on` for yet unknown gamepads. <br>
+/// Clears the output before returning.
+///
+/// 1. Argument: `shared_mem_scan_output` = the output of the bluetooth scan, produced by `bt_scan_on_threaded()`
 pub fn handle_bt_scan_output(shared_mem_scan_output: &Arc<Mutex<Vec<String>>>) {
     let output_copy: Vec<String> = _move_from_shared_mem(shared_mem_scan_output);
 
@@ -100,7 +106,10 @@ pub fn handle_bt_scan_output(shared_mem_scan_output: &Arc<Mutex<Vec<String>>>) {
     }
 }
 
-/// After this function returns the device has been handled, so the loop can be continued
+/// Check if a given output line represents a gamepad / game controller
+///
+/// Arguments:
+/// - `output_line: &str` = One output line of the command `bluetoothctl scan on`
 fn _is_device_controller(output_line: &str) -> bool {
     // Possible outputs
     // [NEW] Device 54:C2:8B:53:A4:3C 54-C2-8B-53-A4-3C         --> irrelevant
