@@ -3,9 +3,13 @@ FROM --platform=linux/arm64 rust:latest
 # Install all required system tools
   RUN apt update 
   RUN apt upgrade -y
-  RUN apt install -y g++-aarch64-linux-gnu libc6-dev-arm64-cross
-  RUN apt install -y libudev-dev libsystemd-dev libdbus-1-dev
-  # ^ support for the hidapi crate
+  RUN apt install -y g++-aarch64-linux-gnu
+  RUN apt install -y libc6-dev-arm64-cross
+
+  # support for the hidapi crate
+  RUN apt install -y libudev-dev
+  RUN apt install -y libdbus-1-dev
+  RUN apt install -y libsystemd-dev
 
 
 # prepare project folder
@@ -13,14 +17,9 @@ FROM --platform=linux/arm64 rust:latest
   RUN cd /
   RUN mkdir gamepad-bridge 
 
-  # everything until here can be cached by docker,
-  # but this line invalidates the cache for all following instructions
-  # This var has to be change with every build command for this to work
-  ARG CACHE_DATE=2023-01-01
-
-  # copy from local into container
-  COPY aarch64build/target /gamepad-bridge/target
+  # Keep the Cargo.toml copy first to stop caching
   COPY Cargo.toml /gamepad-bridge/
+  COPY aarch64build/target /gamepad-bridge/target
   COPY src /gamepad-bridge/src
 
   WORKDIR /gamepad-bridge/

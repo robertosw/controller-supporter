@@ -1,9 +1,11 @@
 #!/bin/bash
 
-# Random collection of might-be useful links if this ever does not work
-# https://www.modio.se/cross-compiling-rust-binaries-to-armv7.html
-# https://kerkour.com/rust-cross-compilation
-# https://github.com/cross-rs/cross/tree/main
+
+# to see how much space docker takes up:
+# docker system df
+
+# clean up EVERYTHING shown in the above command:
+# docker system prune -af
 
 clear
 echo "creating local folders"
@@ -14,8 +16,25 @@ mkdir ./aarch64build/target
 echo
 echo "building image for linux/arm64"
 echo
-docker build --build-arg CACHE_DATE="$(date)" --platform linux/arm64 -t rustarm64 .
-# CACHE_DATE is used to be sure that some instructions of the Dockerfile are never cached
+
+# Increment the version in Cargo.toml to ensure that docker doesnt cache the source code
+
+    # Read the current version from Cargo.toml
+    current_version=$(grep -oP 'version\s*=\s*"\K\d+\.\d+\.\d+' Cargo.toml)
+
+    # Split the version into its components
+    major=$(echo $current_version | cut -d. -f1)
+    minor=$(echo $current_version | cut -d. -f2)
+    patch=$(echo $current_version | cut -d. -f3)
+
+    # Increment the patch version
+    patch=$((patch + 1))
+    new_version=$(echo "$major.$minor.$patch")
+
+    # Update the version in Cargo.toml
+    sed -i "s/version\s*=\s*\"$current_version\"/version = \"$new_version\"/" Cargo.toml
+
+docker build --platform linux/arm64 -t rustarm64 .
 
 echo
 echo "running container for linux/arm64"
@@ -25,10 +44,12 @@ docker run -it --platform linux/arm64 --name rustcont rustarm64
 
 # from here, container finished its CMD
 # copy from container to local
-docker cp rustcont:/gamepad-bridge/target/debug/gamepad-bridge      ./aarch64build/gamepad-bridge
-# docker cp rustcont:/gamepad-bridge/target/release/gamepad-bridge    ./aarch64build/gamepad-bridge
+# docker cp rustcont:/gamepad-bridge/target/debug/gamepad-bridge      ./aarch64build/gamepad-bridge
+docker cp rustcont:/gamepad-bridge/target/release/gamepad-bridge    ./aarch64build/gamepad-bridge
 docker cp rustcont:/gamepad-bridge/target/  ./aarch64build/
-docker rm rustcont
+docker container remove rustcont --volumes
+docker container remove rustcont
+docker image prune --force  # delete older versions of this image to not cluster disk
 
 echo
 echo "project compiled"
