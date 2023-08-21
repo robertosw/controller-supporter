@@ -14,7 +14,8 @@ mkdir ./aarch64build/target
 echo
 echo "building image for linux/arm64"
 echo
-docker build --platform linux/arm64 -t rustarm64 .
+docker build --build-arg CACHE_DATE="$(date)" --platform linux/arm64 -t rustarm64 .
+# CACHE_DATE is used to be sure that some instructions of the Dockerfile are never cached
 
 echo
 echo "running container for linux/arm64"
@@ -24,7 +25,8 @@ docker run -it --platform linux/arm64 --name rustcont rustarm64
 
 # from here, container finished its CMD
 # copy from container to local
-docker cp rustcont:/gamepad-bridge/target/release/gamepad-bridge    ./aarch64build/gamepad-bridge
+docker cp rustcont:/gamepad-bridge/target/debug/gamepad-bridge      ./aarch64build/gamepad-bridge
+# docker cp rustcont:/gamepad-bridge/target/release/gamepad-bridge    ./aarch64build/gamepad-bridge
 docker cp rustcont:/gamepad-bridge/target/  ./aarch64build/
 docker rm rustcont
 
