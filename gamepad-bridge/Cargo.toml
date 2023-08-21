@@ -1,6 +1,6 @@
 [package]
 name = "gamepad-bridge"
-version = "0.4.3"
+version = "0.4.10"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -8,4 +8,6 @@ edition = "2021"
 [dependencies]
 ctrlc = "3.4.0"
 hidapi = "2.4.1"
+rusb = "0.9.2"
+version = "3.0.0"
 # hidg = "0.1.1"    This library broke my Raspberry multiple times. Seems like its not ready for production use
