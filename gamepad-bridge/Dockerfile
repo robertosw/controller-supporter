@@ -27,7 +27,7 @@ FROM --platform=linux/arm64 rust:latest
 
 # build project 
   RUN rustup target add aarch64-unknown-linux-gnu
-  CMD ["cargo", "build"]
+  CMD ["cargo", "build", "--release"]
 
 
 # Stolen from cross-rs

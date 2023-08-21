@@ -9,8 +9,6 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
-use hidg::{Class, Device, Key, Keyboard, Led};
-
 mod bluetooth_fn;
 mod hidapi_fn;
 mod hidapi_read_ps5_usb;
@@ -28,40 +26,8 @@ fn main() {
 
     configure_as_gadget("raspi", "abcdef12345", "Generic Manufacturer", "My Product", "My Config", 0, 0, 64);
 
-    let mut device = Device::<Keyboard>::open("/dev/hidg0").unwrap();
-
-    // Create input report
-    let mut input = Keyboard.input();
-
-    // Press left ctrl modifier
-    input.press_key(Key::LeftCtrl);
-
-    // Press key 'A'
-    input.press_key(Key::A);
-
-    // Send input report
-    device.input(&input).unwrap();
-
-    // Get pressed keys
-    println!("Keys: {:?}", input.pressed().collect::<Vec<Key>>());
-
-    // Release left ctrl modifier
-    input.release_key(Key::LeftCtrl);
-
-    // Release key 'A'
-    input.release_key(Key::A);
-
-    // Send input report
-    device.input(&input).unwrap();
-
-    // Create output report
-    let mut output = Keyboard.output();
-
-    // Receive output report
-    device.output(&mut output).unwrap();
-
-    // Print lit LEDs
-    println!("LEDs: {:?}", output.lit().collect::<Vec<Led>>());
+    // TODO Check if hidg0 device exists
+    // TODO Write to hidg0 device manually
 
     // hier könnte man vielleicht einfach den usbbus von linux nehmen, anscheinend bietet die rusb crate das
 

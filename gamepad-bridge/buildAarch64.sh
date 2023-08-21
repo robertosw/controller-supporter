@@ -31,7 +31,7 @@ docker cp rustcont:/gamepad-bridge/target/  ./aarch64build/
 docker rm rustcont
 
 echo
-echo "project compiled, transfering to raspi"
+echo "project compiled"
 echo
 
 ./buildCopy.sh

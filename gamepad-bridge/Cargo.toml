@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 ctrlc = "3.4.0"
 hidapi = "2.4.1"
-hidg = "0.1.1"
+# hidg = "0.1.1"    This library broke my Raspberry multiple times. Seems like its not ready for production use

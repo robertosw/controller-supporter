@@ -43,7 +43,9 @@ pub fn configure_as_gadget(
     run_cmd(format!("sudo echo {hid_protocol} > {DIR}/{name}/{FN_HID}/protocol"));
     run_cmd(format!("sudo echo {hid_subclass} > {DIR}/{name}/{FN_HID}/subclass"));
     run_cmd(format!("sudo echo {hid_report_length} > {DIR}/{name}/{FN_HID}/report_length"));
-    run_cmd(format!("sudo echo -ne {REPORT_DESC} > {DIR}/{name}/{FN_HID}/report_desc"));
+    // these two are not quite the same, using the first returns in: Syntax error: Unterminated quoted string
+    // run_cmd(format!("sudo sh -c 'echo -ne {REPORT_DESC} > {DIR}/{name}/{FN_HID}/report_desc' "));
+    run_cmd(String::from("sudo sh -c ") + "echo -ne" + REPORT_DESC + " > " + DIR + "/" + name + "/" + FN_HID + "/report_desc");
     run_cmd(format!("sudo ln -s {DIR}/{name}/{FN_HID} {DIR}/{name}/{CONFIG_DIR}/"));
 
     let output = match Command::new("ls").arg("/sys/class/udc").output() {
@@ -57,11 +59,37 @@ pub fn configure_as_gadget(
     let udc_name = String::from_utf8(output.stdout).ok().unwrap();
 
     if udc_name.trim().is_empty() {
-        println!("The Raspberry Pi has not been configured correctly to use the USB Device Controller.");
-        exit(0);
+        exit_with_udc_not_configured_msg();
     }
 
-    run_cmd(format!("echo {udc_name} > {DIR}/{name}/UDC"));
+    // if there are multiple udcs (shouldn't be the case on the zero 2), take the first
+    let (first_udc, _) = match udc_name.split_once(char::is_whitespace) {
+        Some((first_udc, remainder)) => (first_udc, remainder),
+        None => {
+            exit_with_udc_not_configured_msg();
+            return;
+        }
+    };
+
+    // run_cmd(format!("sudo sh -c 'echo {first_udc} > {DIR}/{name}/UDC' "));
+    run_cmd(String::from("sudo sh -c ") + "echo " + first_udc + " > " + DIR + "/" + name + "/UDC");
+}
+
+fn exit_with_udc_not_configured_msg() {
+    println!("\n\nThe Raspberry Pi has not been configured correctly to use the USB Device Controller.");
+    println!("Please run the following commands to configure this:");
+
+    println!("\n $ echo 'dtoverlay=dwc2' | sudo tee -a /boot/config.txt");
+    println!(" $ echo 'dwc2' | sudo tee -a /etc/modules");
+    println!("These two commands should enable the device tree overlay.");
+
+    println!("\n $ sudo echo 'libcomposite' | sudo tee -a /etc/modules");
+    println!("This should enable the libcomposite module at every following boot.");
+
+    println!("\nThis tool will exit now.");
+    println!("After running the commands, check if the values were appended with 'sudo cat /boot/config.txt' and then reboot your Raspberry Pi.");
+
+    exit(0);
 }
 
 /// Runs the given command, waiting for its return and displays any output or error messages
@@ -71,7 +99,7 @@ pub fn configure_as_gadget(
 /// run_cmd("echo Hello World")
 /// ```
 fn run_cmd(input: String) {
-    println!("\n$ '{input}'");
+    println!("\n$ {input}");
 
     let (cmd, remainder) = match input.split_once(char::is_whitespace) {
         Some((extracted, remainder)) => (extracted, remainder),
@@ -91,14 +119,14 @@ fn run_cmd(input: String) {
     let stdout = match String::from_utf8(output.stdout) {
         Ok(string) => string,
         Err(error) => {
-            println!("! stdout of command '{:?}' could not be parsed", input);
+            println!("! stdout of command {:?} could not be parsed", input);
             return;
         }
     };
     let stderr = match String::from_utf8(output.stderr) {
         Ok(string) => string,
         Err(error) => {
-            println!("! stderr of command '{:?}' could not be parsed: {:?}", input, error);
+            println!("! stderr of command {:?} could not be parsed: {:?}", input, error);
             return;
         }
     };
