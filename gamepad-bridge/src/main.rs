@@ -1,4 +1,4 @@
-#![allow(unused_imports, dead_code)]
+#![allow(dead_code)]
 
 use ctrlc::set_handler;
 use hidapi::HidApi;
@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
-use hidg::{Class, Device, Key, Keyboard, Led, StateChange};
+use hidg::{Class, Device, Key, Keyboard, Led};
 
 mod bluetooth_fn;
 mod hidapi_fn;
@@ -19,14 +19,16 @@ mod usb_gadget;
 
 use crate::bluetooth_fn::*;
 use crate::hidapi_fn::*;
+use crate::usb_gadget::*;
 
 // libusb   udeavadm monitor       minicom
 
 fn main() {
-    println!("\nGamepad-Bridge started: v0.3\n");
+    println!("\nGamepad-Bridge started: v0.4.3\n");
 
+    configure_as_gadget("raspi", "abcdef12345", "Generic Manufacturer", "My Product", "My Config", 0, 0, 64);
 
-    let mut device = Device::<Keyboard>::open("/dev/hidg0").unwrap(); // open device
+    let mut device = Device::<Keyboard>::open("/dev/hidg0").unwrap();
 
     // Create input report
     let mut input = Keyboard.input();
