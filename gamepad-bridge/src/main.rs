@@ -1,5 +1,8 @@
 #![allow(dead_code)]
 
+#[macro_use]
+extern crate version;
+
 use ctrlc::set_handler;
 use hidapi::HidApi;
 use std::process::exit;
@@ -22,16 +25,27 @@ use crate::usb_gadget::*;
 // libusb   udeavadm monitor       minicom
 
 fn main() {
-    println!("\nGamepad-Bridge started: v0.4.3\n");
+    println!("\nGamepad-Bridge started: v{:}\n", version!());
 
     configure_as_gadget("raspi", "abcdef12345", "Generic Manufacturer", "My Product", "My Config", 0, 0, 64);
 
+    println!("printing all rusb devices");
+    for device in rusb::devices().unwrap().iter() {
+        let device_desc = device.device_descriptor().unwrap();
+
+        println!(
+            "Bus {:03} Device {:03} ID {:04x}:{:04x}",
+            device.bus_number(),
+            device.address(),
+            device_desc.vendor_id(),
+            device_desc.product_id()
+        );
+    }
+
+    exit(0);
+
     // TODO Check if hidg0 device exists
     // TODO Write to hidg0 device manually
-
-    // hier könnte man vielleicht einfach den usbbus von linux nehmen, anscheinend bietet die rusb crate das
-
-    // oder ansonsten kann man vielleicht einfach eins der /dev/tty als device annehmen...
 
     // Ideas for program flow
     // 1. the whole procedure (BT finding, input read, output to usb) is being duplicated for each player right inside main. So 1-4 threads
