@@ -11,70 +11,69 @@
 */
 
 pub struct DeviceDescriptor {
-    b_length: u8,             // size of this descriptor                                        | 18 bytes = 0x12
-    b_descriptor_type: u8,    // Device descriptor type (assigned by USB)                       | probably 1
-    bcd_usb: u16,             // TODO USB HID Specification Release 1.0.                        | try 0x200 (?= 2.00)
-    b_device_class: u8,       // class code                                                     | 0x00 for HID
-    b_device_sub_class: u8,   // subclass code                                                  | 0x00 for HID
-    b_device_protocol: u8,    // protocol                                                       | 0x00 for HID
-    b_max_packet_size0: u8,   // Maximum packet size for endpoint zero                          | 8 / 16 / 32 / 64
-    id_vendor: u16,           //
-    id_product: u16,          //
-    bcd_device: u16,          // Device release number (assigned by manufacturer)               | try 0x100 (= 1.00)
-    i_manufacturer: u8,       // TODO Index of String descriptor describing manufacturer.       | How can you set this?
-    i_product: u8,            // TODO Index of string descriptor describing product.            | How can you set this?
-    i_serial_number: u8,      // Index of String descriptor describing the device’s             | 0x00 for no serial number
-    b_num_configurations: u8, // How many configuration does this device have                   | in this case, 0x01
-    configuration: ConfigurationDescriptor,
+    b_length: u8,                 // size of this descriptor                                        | 18 bytes = 0x12
+    pub b_descriptor_type: u8,    // Device descriptor type (assigned by USB)                       | probably 1
+    pub bcd_usb: u16,             // TODO USB HID Specification Release 1.0.                        | try 0x200 (?= 2.00)
+    pub b_device_class: u8,       // class code                                                     | 0x00 for HID
+    pub b_device_sub_class: u8,   // subclass code                                                  | 0x00 for HID
+    pub b_device_protocol: u8,    // protocol                                                       | 0x00 for HID
+    pub b_max_packet_size0: u8,   // Maximum packet size for endpoint zero                          | 8 / 16 / 32 / 64
+    pub id_vendor: u16,           //
+    pub id_product: u16,          //
+    pub bcd_device: u16,          // Device release number (assigned by manufacturer)               | try 0x100 (= 1.00)
+    pub i_manufacturer: u8,       // TODO Index of String descriptor describing manufacturer.       | How can you set this?
+    pub i_product: u8,            // TODO Index of string descriptor describing product.            | How can you set this?
+    pub i_serial_number: u8,      // Index of String descriptor describing the device’s             | 0x00 for no serial number
+    pub b_num_configurations: u8, // How many configuration does this device have                   | in this case, 0x01
+    pub configuration: ConfigurationDescriptor,
 }
 
 pub struct ConfigurationDescriptor {
-    b_length: u8,              // Size of this descriptor in bytes                              | 0x09
-    b_descriptor_type: u8,     // Configuration (assigned by USB).                              | 0x02
-    w_total_length: u16,       // TODO Total length of data returned (see page 77)              | has to be calculated (all descriptors are fixed size)
-    b_num_interfaces: u8,      // Number of interfaces supported                                | in this case, 0x01
-    b_configuration_value: u8, // basically the id of this configuration                        | 0x01
-    i_configuration: u8,       // Index of string descriptor for this configuration             | 0x00  = no string
-    bm_attributes: u8,         // bit8=Bus Powered  bit7=Self Powered  bit6=Remote Wakeup       | 0xc0 = 1100 0000 == self and bus powered
-    max_power: u8,             // Maximum power consumption IN 2mA STEPS!!                      | 0xFA = 250 decimal == 500mA
-    interface: InterfaceDescriptor,
+    b_length: u8,                  // Size of this descriptor in bytes                              | 0x09
+    pub b_descriptor_type: u8,     // Configuration (assigned by USB).                              | 0x02
+    pub w_total_length: u16,       // TODO Total length of data returned (see page 77)              | has to be calculated (all descriptors are fixed size)
+    pub b_num_interfaces: u8,      // Number of interfaces supported                                | in this case, 0x01
+    pub b_configuration_value: u8, // basically the id of this configuration                        | 0x01
+    pub i_configuration: u8,       // Index of string descriptor for this configuration             | 0x00  = no string
+    pub bm_attributes: u8,         // bit8=Bus Powered  bit7=Self Powered  bit6=Remote Wakeup       | 0xc0 = 1100 0000 == self and bus powered
+    pub max_power: u8,             // Maximum power consumption IN 2mA STEPS!!                      | 0xFA = 250 decimal == 500mA
+    pub interface: InterfaceDescriptor,
 }
 
 pub struct InterfaceDescriptor {
-    b_length: u8,              // Size of this descriptor in bytes                              | 0x09
-    b_descriptor_type: u8,     // Interface descriptor type (assigned by USB)                   | 0x04
-    b_interface_number: u8,    // Interface Counter (zero based)                                | 0x00
-    b_alternate_setting: u8,   // Value used to select alternate setting                        | 0x00
-    b_num_endpoints: u8,       // Nr of endpoints used (excluding endpoint zero)                | 0x02 (PS5 has two, IN and OUT)
-    b_interface_class: u8,     // Class code (assigned by USB).                                 | always 0x03 for HID devices
-    b_interface_sub_class: u8, // 0 = None  1 = Boot Interface Subclass                         | 0x00
-    b_interface_protocol: u8,  // 0 = None  1 = Keyboard  2 = Mouse                             | 0x00
-    i_interface: u8,           // Index of string descriptor describing this interface          | 0x00
-    hid_device: HidDeviceDescriptor,
-    endpoint_in: EndpointDescriptor,
-    endpoint_out: EndpointDescriptor,
+    b_length: u8,                  // Size of this descriptor in bytes                              | 0x09
+    pub b_descriptor_type: u8,     // Interface descriptor type (assigned by USB)                   | 0x04
+    pub b_interface_number: u8,    // Interface Counter (zero based)                                | 0x00
+    pub b_alternate_setting: u8,   // Value used to select alternate setting                        | 0x00
+    pub b_num_endpoints: u8,       // Nr of endpoints used (excluding endpoint zero)                | 0x02 (PS5 has two, IN and OUT)
+    pub b_interface_class: u8,     // Class code (assigned by USB).                                 | always 0x03 for HID devices
+    pub b_interface_sub_class: u8, // 0 = None  1 = Boot Interface Subclass                         | 0x00
+    pub b_interface_protocol: u8,  // 0 = None  1 = Keyboard  2 = Mouse                             | 0x00
+    pub i_interface: u8,           // Index of string descriptor describing this interface          | 0x00
+    pub hid_device: HidDeviceDescriptor,
+    pub endpoint_in: EndpointDescriptor,
+    pub endpoint_out: EndpointDescriptor,
 }
 
 pub struct HidDeviceDescriptor {
-    b_length: u8,          // Size of this descriptor in bytes                               | 0x09
-    b_descriptor_type: u8, // HID descriptor type (assigned by USB).                         | 0x21 = 32
-    bcd_hid: u16,          // HID Class Specification release number                         | 0x111 = 1.11
-    b_country_code: u8,    // Hardware target country                                        | 0x00
-    b_num_descriptors: u8, // Number of HID class descriptors to follow                      | 0x01
+    b_length: u8,              // Size of this descriptor in bytes                                  | 0x09
+    pub b_descriptor_type: u8, // HID descriptor type (assigned by USB).                            | 0x21 = 32
+    pub bcd_hid: u16,          // HID Class Specification release number                            | 0x111 = 1.11
+    pub b_country_code: u8,    // Hardware target country                                           | 0x00
+    pub b_num_descriptors: u8, // Number of HID class descriptors to follow                         | 0x01
 
     /// this is also called bDescriptorType in the docu.. quite confusing
-    b_descriptor_type_report: u8, // Report descriptor type                                     | 0x22 = 33
-    w_descriptor_length: u16, // Total length of Report descriptor                              | 0x111 = 273
-    report: *const u8,        // the report descriptor (as ref to allow array)
+    pub b_descriptor_type_report: u8, // Report descriptor type                                     | 0x22 = 33
+    pub w_descriptor_length: u16, // Total length of Report descriptor                              | 0x111 = 273
 }
 
 pub struct EndpointDescriptor {
-    b_length: u8,           // size of this descriptor in bytes                                     | 0x07
-    b_descriptor_type: u8,  // Endpoint descriptor type (assigned by USB).                          | 0x05
-    b_endpoint_address: u8, // TODO Explanation below, this might get set by linux gadget drivers   | 0x84  EP 4 IN
-    bm_attributes: u8,      // Explanation below                                                    | 00000011 = 3
-    w_max_packet_size: u8,  // max packet size                                                      | 0x0040 = 64 bytes
-    b_interval: u8,         // in ms                                                                | 0x06
+    b_length: u8,               // size of this descriptor in bytes                                     | 0x07
+    pub b_descriptor_type: u8,  // Endpoint descriptor type (assigned by USB).                          | 0x05
+    pub b_endpoint_address: u8, // TODO Explanation below, this might get set by linux gadget drivers   | 0x84  EP 4 IN
+    pub bm_attributes: u8,      // Explanation below                                                    | 00000011 = 3
+    pub w_max_packet_size: u8,  // max packet size                                                      | 0x0040 = 64 bytes
+    pub b_interval: u8,         // in ms                                                                | 0x06
 }
 /* bEndpointAddress explained
  *
@@ -103,7 +102,7 @@ pub struct EndpointDescriptor {
  * All other bits are reserved.
  */
 
-pub const PS5GAMEPAD: DeviceDescriptor = DeviceDescriptor {
+pub const PS5_GAMEPAD: DeviceDescriptor = DeviceDescriptor {
     b_length: 18,
     b_descriptor_type: 1,
     bcd_usb: 0x200,
@@ -145,7 +144,6 @@ pub const PS5GAMEPAD: DeviceDescriptor = DeviceDescriptor {
                 b_num_descriptors: 1,
                 b_descriptor_type_report: 33,
                 w_descriptor_length: PS5_REPORT_DESCRIPTOR_SIZE,
-                report: PS5_REPORT_DESCRIPTOR.as_ptr(),
             },
             endpoint_in: EndpointDescriptor {
                 b_length: 7,
@@ -169,7 +167,7 @@ pub const PS5GAMEPAD: DeviceDescriptor = DeviceDescriptor {
 
 const PS5_REPORT_DESCRIPTOR_SIZE: u16 = 273;
 
-const PS5_REPORT_DESCRIPTOR: [u8; PS5_REPORT_DESCRIPTOR_SIZE as usize] = [
+pub const PS5_REPORT_DESCRIPTOR: [u8; PS5_REPORT_DESCRIPTOR_SIZE as usize] = [
     0x05, 0x01, // Usage Page (Generic Desktop Ctrls)
     0x09, 0x05, // Usage (Game Pad)
     0xA1, 0x01, // Collection (Application)
