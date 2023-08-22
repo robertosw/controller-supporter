@@ -16,13 +16,14 @@ mod bluetooth_fn;
 mod hidapi_fn;
 mod hidapi_read_ps5_usb;
 mod hidapi_structs;
+mod usb_descr;
 mod usb_gadget;
 
 use crate::bluetooth_fn::*;
 use crate::hidapi_fn::*;
 use crate::usb_gadget::*;
 
-// libusb   udeavadm monitor       minicom
+// lsusb   udevadm monitor       minicom
 
 fn main() {
     println!("\nGamepad-Bridge started: v{:}\n", version!());
@@ -42,10 +43,38 @@ fn main() {
         );
     }
 
+    println!("printing all hidadpi devices");
+    let api = match HidApi::new() {
+        Ok(api) => api,
+        Err(err) => {
+            println!("Error getting HidApi access: {:?}", err);
+            exit(2);
+        }
+    };
+
+    for device in api.device_list() {
+        print!("{:?}", device.bus_type());
+        print!("{:?}", device.interface_number());
+        print!("{:?}", device.manufacturer_string());
+        print!("{:?}", device.manufacturer_string_raw());
+        print!("{:?}", device.path());
+        print!("{:?}", device.product_id());
+        print!("{:?}", device.product_string());
+        print!("{:?}", device.product_string_raw());
+        print!("{:?}", device.release_number());
+        print!("{:?}", device.serial_number());
+        print!("{:?}", device.serial_number_raw());
+        print!("{:?}", device.vendor_id());
+    }
+
     exit(0);
 
     // TODO Check if hidg0 device exists
-    // TODO Write to hidg0 device manually
+
+    // TODO Write to hidg0 device manually (example)
+    // sudo su
+    // echo -ne "\0\0\x4\0\0\0\0\0" > /dev/hidg0 #press the A-button
+    // echo -ne "\0\0\0\0\0\0\0\0" > /dev/hidg0 #release all keys
 
     // Ideas for program flow
     // 1. the whole procedure (BT finding, input read, output to usb) is being duplicated for each player right inside main. So 1-4 threads
