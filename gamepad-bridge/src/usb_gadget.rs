@@ -1,4 +1,8 @@
-use std::{fs::File, io::Write};
+use std::{
+    fs::File,
+    io::Write,
+    process::{exit, Command},
+};
 
 use crate::{run_cmd, usb_descr::UsbDeviceDescriptor};
 
@@ -31,13 +35,24 @@ pub fn enable_gadget_mode(device: UsbDeviceDescriptor, serialnumber: &str, manuf
 
     match write_device_descriptor(&device) {
         Ok(_) => (),
-        Err(_) => return,
+        Err(err) => {
+            print!("{err}");
+            return;
+        }
     };
 
     // match write_strings(serialnumber, manufacturer, product) {
     //     Ok(_) => (),
     //     Err(_) => (),
     // };
+
+    match bind_to_udc() {
+        Ok(_) => (),
+        Err(err) => {
+            print!("{err}");
+            return;
+        }
+    }
 }
 
 fn create_directories() -> Result<(), ()> {
@@ -176,4 +191,56 @@ fn write_strings(_serialnumber: &str, manufacturer: &str, product: &str) -> Resu
     // };
 
     return Ok(());
+}
+
+fn bind_to_udc() -> Result<(), &'static str> {
+    let output = match Command::new("ls").arg("/sys/class/udc").output() {
+        Ok(output) => output,
+        Err(error) => {
+            println!("unwrapping the output failed: {:?}", error);
+            return Err("");
+        }
+    };
+
+    let udc_name = String::from_utf8(output.stdout).ok().unwrap();
+
+    if udc_name.trim().is_empty() {
+        exit_with_udc_not_configured_msg();
+    }
+
+    // if there are multiple udcs (shouldn't be the case on the zero 2), take the first
+    let (first_udc, _) = match udc_name.split_once(char::is_whitespace) {
+        Some((first_udc, remainder)) => (first_udc, remainder),
+        None => {
+            exit_with_udc_not_configured_msg();
+            return Err("");
+        }
+    };
+
+    // run_cmd(format!("sudo sh -c 'echo {first_udc} > {DIR}/{name}/UDC' "));
+    let cmd_string = String::from("sudo sh -c ") + "echo " + first_udc + " > UDC";
+
+    match run_cmd(DEVICE_DIR, cmd_string.as_str()) {
+        Ok(_) => (),
+        Err(_) => return Err("Could not bind device to UDC"),
+    };
+
+    return Ok(());
+}
+
+fn exit_with_udc_not_configured_msg() {
+    println!("\n\nThe Raspberry Pi has not been configured correctly to use the USB Device Controller.");
+    println!("Please run the following commands to configure this:");
+
+    println!("\n $ echo 'dtoverlay=dwc2' | sudo tee -a /boot/config.txt");
+    println!(" $ echo 'dwc2' | sudo tee -a /etc/modules");
+    println!("These two commands should enable the device tree overlay.");
+
+    println!("\n $ sudo echo 'libcomposite' | sudo tee -a /etc/modules");
+    println!("This should enable the libcomposite module at every following boot.");
+
+    println!("\nThis tool will exit now.");
+    println!("After running the commands, check if the values were appended with 'sudo cat /boot/config.txt' and then reboot your Raspberry Pi.");
+
+    exit(0);
 }
