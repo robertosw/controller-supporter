@@ -25,7 +25,7 @@ I expect there will be some problems as Playstations communicate both ways, but 
 # Goal
 Due to the PS4 problem described in "Used Hardware", the Raspi must be connected to the targeted platform via a USB cable.
 
-Ideally, the Raspi would support a Bluetooth connection to two controllers, processing both inputs and translating them to the platform. For this to work, it may be necessary to connect the Raspi to the platform with two USB cables, so that the platform can recognise two independent controllers.
+Ideally, the Raspi would support a Bluetooth connection to two controllers, processing both inputs and translating them to the platform. Since USB allows a lot of things in one connection this shouldn't really be a problem :D
 
 # Possible Inspirations / Mapping Sources
 - [GP2040](https://github.com/FeralAI/GP2040)
