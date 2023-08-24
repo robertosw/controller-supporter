@@ -10,8 +10,6 @@
  *  - Subclass field is used to identify Boot Devices.
 */
 
-const GADGET_DIR_NAME: &str = "raspi";
-
 /// - `b_length` (Size of this descriptor) is always **18 bytes**
 /// - fields starting with `struct_` are not taken from the official usb.org documentation
 pub struct UsbDeviceDescriptor {
@@ -28,11 +26,13 @@ pub struct UsbDeviceDescriptor {
     pub i_product: u8,            // TODO Index of string descriptor describing product.            | How can you set this?
     pub i_serial_number: u8,      // Index of String descriptor describing the device’s             | 0x00 for no serial number
     pub b_num_configurations: u8, // How many configuration does this device have                   | in this case, 0x01
+    // pub struct_strings: UsbDeviceStrings,
     pub struct_configuration: UsbConfigurationDescriptor,
 }
 
-impl UsbDeviceDescriptor {
-    fn enable_for_gadget() {}
+// TODO use
+pub struct UsbDeviceStrings<'a> {
+    pub serialnumber: &'a str,
 }
 
 /// - `b_length` (Size of this descriptor) is always **9 bytes**

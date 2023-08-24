@@ -7,6 +7,7 @@ extern crate version;
 use ctrlc::set_handler;
 use hidapi::HidApi;
 use std::process::exit;
+use std::process::Command;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -17,17 +18,27 @@ mod bluetooth_fn;
 mod hidapi_fn;
 mod hidapi_read_ps5_usb;
 mod hidapi_structs;
-mod usb_descr;
 mod usb_gadget;
+mod usb_descr;
+mod usb_gadget_old;
 mod usb_gamepads;
 
 use crate::bluetooth_fn::*;
 use crate::hidapi_fn::*;
+use crate::usb_gamepads::PS5_GAMEPAD;
 
 // lsusb   udevadm monitor       minicom
 
 fn main() {
     println!("\nGamepad-Bridge started: v{:}\n", version!());
+
+    // TODO Ensure that this is always run as sudo! Exit if not 
+
+    // write_files();
+
+    usb_gadget::enable_gadget_mode(PS5_GAMEPAD, "", "manufacturer", "product");
+
+    exit(0);
 
     println!("printing all hidadpi devices");
     let api = match HidApi::new() {
@@ -52,8 +63,6 @@ fn main() {
         print!("{:?}", device.serial_number_raw());
         print!("{:?}", device.vendor_id());
     }
-
-    exit(0);
 
     // TODO Check if hidg0 device exists
 
@@ -107,4 +116,38 @@ fn hidapi_starter() {
     };
 
     let _gamepads: Vec<hidapi::DeviceInfo> = find_supported_gamepads(api);
+}
+
+/// always runs command as sudo
+pub fn run_cmd(current_dir: &str, cmd: &str) -> Result<(), ()> {
+    println!("\n$ sudo {cmd}");
+    let args: Vec<&str> = cmd.split_whitespace().collect();
+
+    println!("args: {:?}", args);
+
+    let output = match Command::new("sudo").args(args).current_dir(current_dir).output() {
+        Ok(output) => output,
+        Err(error) => {
+            println!("Error: {:?}", error);
+            return Err(());
+        }
+    };
+    let stdout = match String::from_utf8(output.stdout) {
+        Ok(string) => string,
+        Err(error) => {
+            println!("! stdout of command {:?} could not be parsed: {:?}", cmd, error);
+            return Err(());
+        }
+    };
+    let stderr = match String::from_utf8(output.stderr) {
+        Ok(string) => string,
+        Err(error) => {
+            println!("! stderr of command {:?} could not be parsed: {:?}", cmd, error);
+            return Err(());
+        }
+    };
+    println!("> {:?}", stdout);
+    println!("! {:?}", stderr);
+
+    return Ok(());
 }
