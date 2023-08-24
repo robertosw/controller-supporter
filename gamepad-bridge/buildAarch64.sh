@@ -23,21 +23,23 @@ echo
 # Increment the version in Cargo.toml to ensure that docker doesnt cache the source code
 
     # Read the current version from Cargo.toml
-    current_version=$(grep -oP --max-count=1 'version\s*=\s*"\K\d+\.\d+\.\d+' Cargo.toml)
+    current_version=$(grep -oP --max-count=1 'version\s*=\s*"\K[^"]*' Cargo.toml)
+
+    echo current version: $current_version
 
     # Split the version into its components
-    major=$(echo $current_version | cut -d. -f1)
-    minor=$(echo $current_version | cut -d. -f2)
-    patch=$(echo $current_version | cut -d. -f3)
+    major=$(echo "$current_version" | cut -d'.' -f1)
+    minor=$(echo "$current_version" | cut -d'.' -f2)
+    patch=$(echo "$current_version" | cut -d'.' -f3 | cut -d'-' -f1)
+    build=$(echo "$current_version" | cut -d'-' -f2)
 
-    # Increment the patch version
-    patch=$((patch + 1))
-    new_version=$(echo "$major.$minor.$patch")
-    echo $new_version
+    build=$((build + 1))
+    new_version="$major.$minor.$patch-$build"
 
-    # replace the third line with the new content
-    new_content=$(echo version = \"$new_version\")
-    sed "3s/.*/$new_content/" "Cargo.toml" > temp_file && mv temp_file "Cargo.toml"
+    echo new version: $new_version
+
+    # replace old with the new version
+    sed -i "s/version = \"$current_version\"/version = \"$new_version\"/" Cargo.toml
 
 docker build --platform linux/arm64 -t rustarm64 .
 
