@@ -2,6 +2,7 @@
 
 #[macro_use]
 extern crate version;
+// To allow using the version! macro
 
 use ctrlc::set_handler;
 use hidapi::HidApi;
@@ -18,30 +19,15 @@ mod hidapi_read_ps5_usb;
 mod hidapi_structs;
 mod usb_descr;
 mod usb_gadget;
+mod usb_gamepads;
 
 use crate::bluetooth_fn::*;
 use crate::hidapi_fn::*;
-use crate::usb_gadget::*;
 
 // lsusb   udevadm monitor       minicom
 
 fn main() {
     println!("\nGamepad-Bridge started: v{:}\n", version!());
-
-    configure_as_gadget("raspi", "abcdef12345", "Generic Manufacturer", "My Product", "My Config", 0, 0, 64);
-
-    println!("printing all rusb devices");
-    for device in rusb::devices().unwrap().iter() {
-        let device_desc = device.device_descriptor().unwrap();
-
-        println!(
-            "Bus {:03} Device {:03} ID {:04x}:{:04x}",
-            device.bus_number(),
-            device.address(),
-            device_desc.vendor_id(),
-            device_desc.product_id()
-        );
-    }
 
     println!("printing all hidadpi devices");
     let api = match HidApi::new() {

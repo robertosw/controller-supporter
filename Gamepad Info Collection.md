@@ -1,6 +1,7 @@
-# Raspi Rust Target
-
-Installing rust with rustup provides that the Raspberry Pi Zero 2 is `aarch64-unknown-linux-gnu`
+- Installing rust with rustup provides that the Raspberry Pi Zero 2 is `aarch64-unknown-linux-gnu`
+- `/sys/bus/hid/devices/` hid devices here probably have the same folder structure as is needed for by the gadget driver
+- [HID Report Descriptors Syntax Intro](https://www.kernel.org/doc/html/next/hid/hidintro.html)
+- `lspci -v|grep HCI` find out which type of **Host Controller Driver** you have on your hardware
 
 <br>
 

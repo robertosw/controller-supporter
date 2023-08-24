@@ -2,7 +2,7 @@
 
 use std::process::{exit, Command};
 
-use crate::usb_descr;
+use crate::usb_gamepads;
 
 const DIR: &str = "/sys/kernel/config/usb_gadget";
 const STR_ENG: &str = "strings/0x409";
@@ -10,22 +10,11 @@ const CONFIG_DIR: &str = "configs/c.1";
 const FN_HID: &str = "functions/hid.usb0";
 
 /// Using linux' ConfigFS, create a new usb gadget
-pub fn configure_as_gadget(
-    name: &str,
-    // vendor_id: &str,
-    // product_id: &str,
-    serialnr: &str,
-    manufacturer: &str,
-    product_name: &str,
-    config_name: &str, // example: Wireless Controller
-    hid_protocol: u8,
-    hid_subclass: u8,
-    hid_report_length: u8,
-) {
+pub fn configure_as_gadget() {
     // TODO Use the values from usb_descr::PS5GAMEPAD
     // TODO see which of these values ^ are supported to be set using linux gadget driver
 
-    let report_desc_str: String = usb_descr::PS5_REPORT_DESCRIPTOR.iter().map(|&byte| format!("\\x{:02X}", byte)).collect();
+    let report_desc_str: String = usb_gamepads::PS5_REPORT_DESCRIPTOR.iter().map(|&byte| format!("\\x{:02X}", byte)).collect();
     let report_desc_str: &str = report_desc_str.as_str();
 
     println!("========== configuring device as usb gadget ==========");
@@ -33,30 +22,30 @@ pub fn configure_as_gadget(
     println!("\n $ =command \t > =stdout \t ! =stderr");
 
     run_cmd(format!("sudo modprobe libcomposite"));
-    run_cmd(format!("sudo mkdir {DIR}/{name}"));
+    // run_cmd(format!("sudo mkdir {DIR}/{name}"));
 
     // TODO somehow use hex int here
-    run_cmd(format!("sudo echo 0x1d6b > {DIR}/{name}/idVendor"));
-    run_cmd(format!("sudo echo 0x0104 > {DIR}/{name}/idProduct"));
-    run_cmd(format!("sudo echo 0x0100 > {DIR}/{name}/bcdDevice"));
-    run_cmd(format!("sudo echo 0x0200 > {DIR}/{name}/bcdUSB"));
-    run_cmd(format!("sudo mkdir -p {DIR}/{name}/{STR_ENG}"));
-    run_cmd(format!("sudo echo '{serialnr}' > {DIR}/{name}/{STR_ENG}/serialnumber",));
-    run_cmd(format!("sudo echo '{manufacturer}' > {DIR}/{name}/{STR_ENG}/manufacturer",));
-    run_cmd(format!("sudo echo '{product_name}' > {DIR}/{name}/{STR_ENG}/product"));
-    run_cmd(format!("sudo mkdir -p {DIR}/{name}/{CONFIG_DIR}/{STR_ENG}"));
-    run_cmd(format!("sudo echo '{config_name}' > {DIR}/{name}/{CONFIG_DIR}/{STR_ENG}/configuration"));
-    run_cmd(format!("sudo echo 500 > {DIR}/{name}/{CONFIG_DIR}/MaxPower"));
+    // run_cmd(format!("sudo echo 0x1d6b > {DIR}/{name}/idVendor"));
+    // run_cmd(format!("sudo echo 0x0104 > {DIR}/{name}/idProduct"));
+    // run_cmd(format!("sudo echo 0x0100 > {DIR}/{name}/bcdDevice"));
+    // run_cmd(format!("sudo echo 0x0200 > {DIR}/{name}/bcdUSB"));
+    // run_cmd(format!("sudo mkdir -p {DIR}/{name}/{STR_ENG}"));
+    // run_cmd(format!("sudo echo '{serialnr}' > {DIR}/{name}/{STR_ENG}/serialnumber",));
+    // run_cmd(format!("sudo echo '{manufacturer}' > {DIR}/{name}/{STR_ENG}/manufacturer",));
+    // run_cmd(format!("sudo echo '{product_name}' > {DIR}/{name}/{STR_ENG}/product"));
+    // run_cmd(format!("sudo mkdir -p {DIR}/{name}/{CONFIG_DIR}/{STR_ENG}"));
+    // run_cmd(format!("sudo echo '{config_name}' > {DIR}/{name}/{CONFIG_DIR}/{STR_ENG}/configuration"));
+    // run_cmd(format!("sudo echo 500 > {DIR}/{name}/{CONFIG_DIR}/MaxPower"));
 
     // Adding HID functions
-    run_cmd(format!("sudo mkdir -p {DIR}/{name}/{FN_HID}"));
-    run_cmd(format!("sudo echo {hid_protocol} > {DIR}/{name}/{FN_HID}/protocol"));
-    run_cmd(format!("sudo echo {hid_subclass} > {DIR}/{name}/{FN_HID}/subclass"));
-    run_cmd(format!("sudo echo {hid_report_length} > {DIR}/{name}/{FN_HID}/report_length"));
-    // these two are not quite the same, using the first returns in: Syntax error: Unterminated quoted string
-    // run_cmd(format!("sudo sh -c 'echo -ne {REPORT_DESC} > {DIR}/{name}/{FN_HID}/report_desc' "));
-    run_cmd(String::from("sudo sh -c ") + "echo -ne" + report_desc_str + " > " + DIR + "/" + name + "/" + FN_HID + "/report_desc");
-    run_cmd(format!("sudo ln -s {DIR}/{name}/{FN_HID} {DIR}/{name}/{CONFIG_DIR}/"));
+    // run_cmd(format!("sudo mkdir -p {DIR}/{name}/{FN_HID}"));
+    // run_cmd(format!("sudo echo {hid_protocol} > {DIR}/{name}/{FN_HID}/protocol"));
+    // run_cmd(format!("sudo echo {hid_subclass} > {DIR}/{name}/{FN_HID}/subclass"));
+    // run_cmd(format!("sudo echo {hid_report_length} > {DIR}/{name}/{FN_HID}/report_length"));
+    // // these two are not quite the same, using the first returns in: Syntax error: Unterminated quoted string
+    // // run_cmd(format!("sudo sh -c 'echo -ne {REPORT_DESC} > {DIR}/{name}/{FN_HID}/report_desc' "));
+    // run_cmd(String::from("sudo sh -c ") + "echo -ne" + report_desc_str + " > " + DIR + "/" + name + "/" + FN_HID + "/report_desc");
+    // run_cmd(format!("sudo ln -s {DIR}/{name}/{FN_HID} {DIR}/{name}/{CONFIG_DIR}/"));
 
     let output = match Command::new("ls").arg("/sys/class/udc").output() {
         Ok(output) => output,
@@ -82,7 +71,7 @@ pub fn configure_as_gadget(
     };
 
     // run_cmd(format!("sudo sh -c 'echo {first_udc} > {DIR}/{name}/UDC' "));
-    run_cmd(String::from("sudo sh -c ") + "echo " + first_udc + " > " + DIR + "/" + name + "/UDC");
+    // run_cmd(String::from("sudo sh -c ") + "echo " + first_udc + " > " + DIR + "/" + name + "/UDC");
 
     println!("\n");
 }
