@@ -13,38 +13,38 @@
 /// - `b_length` (Size of this descriptor) is always **18 bytes**
 /// - fields starting with `struct_` are not taken from the official usb.org documentation
 pub struct UsbDeviceDescriptor {
-    pub b_descriptor_type: u8,    // Device descriptor type (assigned by USB)                       | probably 1
-    pub bcd_usb: u16,             // TODO USB HID Specification Release 1.0.                        | try 0x200 (?= 2.00)
-    pub b_device_class: u8,       // class code                                                     | 0x00 for HID
-    pub b_device_sub_class: u8,   // subclass code                                                  | 0x00 for HID
-    pub b_device_protocol: u8,    // protocol                                                       | 0x00 for HID
-    pub b_max_packet_size0: u8,   // Maximum packet size for endpoint zero                          | 8 / 16 / 32 / 64
-    pub id_vendor: u16,           //
-    pub id_product: u16,          //
-    pub bcd_device: u16,          // Device release number (assigned by manufacturer)               | try 0x100 (= 1.00)
-    pub i_manufacturer: u8,       // TODO Index of String descriptor describing manufacturer.       | How can you set this?
-    pub i_product: u8,            // TODO Index of string descriptor describing product.            | How can you set this?
-    pub i_serial_number: u8,      // Index of String descriptor describing the device’s             | 0x00 for no serial number
-    pub b_num_configurations: u8, // How many configuration does this device have                   | in this case, 0x01
+    // pub b_descriptor_type: u8,       // Device descriptor type (assigned by USB)                 | Set by gadget driver
+    // pub b_num_configurations: u8,    // How many configuration does this device have             | Set by gadget driver
+    // pub i_manufacturer: u8,          // Index of String descriptor describing manufacturer.      | Set by gadget driver according to contents of /strings
+    // pub i_product: u8,               // Index of string descriptor describing product.           | Set by gadget driver according to contents of /strings
+    // pub i_serial_number: u8,         // Index of String descriptor describing the device’s       | Set by gadget driver according to contents of /strings
+    pub bcd_usb: u16,           // USB HID Specification Release 1.0.                               | 0x200 = 2.00
+    pub b_device_class: u8,     // class code                                                       | 0x00 for HID
+    pub b_device_sub_class: u8, // subclass code                                                    | 0x00 for HID
+    pub b_device_protocol: u8,  // protocol                                                         | 0x00 for HID
+    pub b_max_packet_size0: u8, // Maximum packet size for endpoint zero                            | 8 / 16 / 32 / 64
+    pub id_vendor: u16,         //
+    pub id_product: u16,        //
+    pub bcd_device: u16,        // Device release number (assigned by manufacturer)                 | 0x100 = 1.00
     pub struct_configuration: UsbConfigurationDescriptor,
 }
 
 pub struct UsbDeviceStrings<'a> {
-    pub serialnumber: &'a str,
-    pub product: &'a str,
-    pub manufacturer: &'a str,
+    pub serialnumber: &'a str, // can be empty
+    pub product: &'a str,      // can be empty
+    pub manufacturer: &'a str, // can be empty
 }
 
 /// - `b_length` (Size of this descriptor) is always **9 bytes**
 /// - fields starting with `struct_` are not taken from the official usb.org documentation
 pub struct UsbConfigurationDescriptor {
-    pub b_descriptor_type: u8,     // Configuration (assigned by USB).                              | 0x02
-    pub w_total_length: u16,       // TODO Total length of data returned (see page 77)              | has to be calculated (all descriptors are fixed size)
-    pub b_num_interfaces: u8,      // Number of interfaces supported                                | in this case, 0x01
-    pub b_configuration_value: u8, // basically the id of this configuration                        | 0x01
-    pub i_configuration: u8,       // Index of string descriptor for this configuration             | 0x00  = no string
-    pub bm_attributes: u8,         // bit8=Bus Powered  bit7=Self Powered  bit6=Remote Wakeup       | 0xc0 = 1100 0000 == self and bus powered
-    pub max_power: u8,             // Maximum power consumption IN 2mA STEPS!!                      | 0xFA = 250 decimal == 500mA
+    // pub b_descriptor_type: u8,       // Configuration (assigned by USB).                         | Set by gadget driver
+    // pub w_total_length: u16,         // Total length of data returned (see page 77)              | Set by gadget driver
+    // pub b_num_interfaces: u8,        // Number of interfaces supported                           | Set by gadget driver
+    // pub b_configuration_value: u8,   // basically the id of this configuration                   | Set by gadget driver
+    // pub i_configuration: u8,         // Index of string descriptor for this configuration        | Set by gadget driver
+    pub bm_attributes: u8, // bit8=Bus Powered  bit7=Self Powered  bit6=Remote Wakeup               | 0xc0 = 1100 0000 == self and bus powered
+    pub max_power: u8,     // Maximum power consumption in 2mA STEPS!!                              | 0xFA = 250 decimal == 500mA
     pub struct_interface: UsbInterfaceDescriptor,
 }
 

@@ -9,7 +9,6 @@ pub const PS5_DEVICE_STRINGS: UsbDeviceStrings = UsbDeviceStrings {
 };
 
 pub const PS5_GAMEPAD: UsbDeviceDescriptor = UsbDeviceDescriptor {
-    b_descriptor_type: 1,
     bcd_usb: 0x200,
     b_device_class: 0,
     b_device_sub_class: 0,
@@ -18,17 +17,8 @@ pub const PS5_GAMEPAD: UsbDeviceDescriptor = UsbDeviceDescriptor {
     id_vendor: 0x054c,
     id_product: 0x0ce6,
     bcd_device: 0x100,
-    i_manufacturer: 1,
-    i_product: 2,
-    i_serial_number: 0,
-    b_num_configurations: 1,
     struct_configuration: UsbConfigurationDescriptor {
-        b_descriptor_type: 2,
-        w_total_length: (9 + 9 + 9 + 7 + 7), // configuration, interface, hid (without report), both endpoints
-        b_num_interfaces: 1,
-        b_configuration_value: 1,
-        i_configuration: 0,
-        bm_attributes: 0b1100000,
+        bm_attributes: 0b11000000,
         max_power: 250,
         struct_interface: UsbInterfaceDescriptor {
             b_descriptor_type: 4,
