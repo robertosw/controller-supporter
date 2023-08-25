@@ -24,7 +24,6 @@ FROM --platform=linux/arm64 rust:1.71.0
   RUN apt install -y libsystemd-dev
 
   RUN ldd --version && sleep 2
-  RUN lsb_release -a && sleep 2
 
 # prepare project folder
 # changes in folder names also effect the shellscript! -> edit there as well
