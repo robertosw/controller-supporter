@@ -2,12 +2,6 @@ use crate::usb_descr::*;
 
 const PS5_REPORT_DESCRIPTOR_SIZE: u16 = 273;
 
-pub const PS5_DEVICE_STRINGS: UsbDeviceStrings = UsbDeviceStrings {
-    manufacturer: "Sony Interactive Entertainment",
-    product: "Wireless Controller",
-    serialnumber: "",
-};
-
 pub const PS5_GAMEPAD: UsbDeviceDescriptor = UsbDeviceDescriptor {
     bcd_usb: 0x200,
     b_device_class: 0,
@@ -17,6 +11,11 @@ pub const PS5_GAMEPAD: UsbDeviceDescriptor = UsbDeviceDescriptor {
     id_vendor: 0x054c,
     id_product: 0x0ce6,
     bcd_device: 0x100,
+    struct_strings: UsbDeviceStrings {
+        manufacturer: "Sony Interactive Entertainment",
+        product: "Wireless Controller",
+        serialnumber: "",
+    },
     struct_configuration: UsbConfigurationDescriptor {
         bm_attributes: 0b11000000,
         max_power: 250,
@@ -97,7 +96,8 @@ pub const PS5_REPORT_DESCRIPTOR: [u8; PS5_REPORT_DESCRIPTOR_SIZE as usize] = [
     0x25, 0x01, //   Logical Maximum (1)                or 1
     0x75, 0x01, //   Report Size (1)                    sending 1/0 needs 1 bit
     0x95, 0x0F, //   Report Count (15)                  Confirms that there are 15 Buttons
-    0x81, 0x02, //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)       Information about what these Buttons are (HID spec Sec. 6.2.2.5)
+    0x81,
+    0x02, //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)       Information about what these Buttons are (HID spec Sec. 6.2.2.5)
     //
     0x06, 0x00, 0xFF, //   Usage Page (Vendor Defined 0xFF00)
     0x09, 0x21, //   Usage (0x21)
