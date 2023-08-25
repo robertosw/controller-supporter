@@ -1,4 +1,16 @@
-FROM --platform=linux/arm64 rust:latest
+FROM --platform=linux/arm64 rust:1.71.0
+# Since the raspi runs on debian, it does not have the most up to date packages (like glibc)
+# The debian version of this container has to fit the debian version of the raspi
+
+# Show debian version:
+# lsb_release -a
+
+# https://hub.docker.com/layers/library/rust/1.71.1/images/sha256-79ddef683780336ce47c56c86184cf49e4f36c598d8f0bfe9453f52437b1b9a9?context=explore
+# rust:1.71.1 is based on debian 11
+
+# https://hub.docker.com/layers/library/rust/1.72.0/images/sha256-1119497a1d5e1eeffc369e93b7d014a2df5b57e2c63ade082bfda32f594e5192?context=explore
+# starting with 1.72.0, this container is based on debian 12
+
 
 # Install all required system tools
   RUN apt update 
@@ -11,6 +23,8 @@ FROM --platform=linux/arm64 rust:latest
   RUN apt install -y libdbus-1-dev
   RUN apt install -y libsystemd-dev
 
+  RUN ldd --version && sleep 2
+  RUN lsb_release -a && sleep 2
 
 # prepare project folder
 # changes in folder names also effect the shellscript! -> edit there as well
