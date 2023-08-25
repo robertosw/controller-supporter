@@ -18,7 +18,7 @@ mod bluetooth_fn;
 mod hidapi_fn;
 mod hidapi_read_ps5_usb;
 mod hidapi_structs;
-mod usb_descr;
+mod usb_gadget;
 mod usb_gamepads;
 
 use crate::bluetooth_fn::*;
@@ -31,6 +31,13 @@ fn main() {
     println!("\nGamepad-Bridge started: v{:}\n", version!());
 
     // TODO Ensure that this is always run as sudo! Exit if not
+
+    // TODO Somehow the host doesnt want what has been setup by configfs, maybe try with shell script again because this worked already
+    // Maybe my report_desc and my functions and configs dont match?
+    // corresponding errors:
+    // usb 1-2: device not accepting address 16, error -62
+    // usb 1-2: device descriptor read/64, error -110
+    // usb usb1-port2: unable to enumerate USB device
 
     PS5_GAMEPAD.configure_device();
 

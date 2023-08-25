@@ -19,20 +19,12 @@ use std::{
 use crate::print_and_exit;
 use crate::run_cmd;
 
-const BASE_DIR: &str = "/sys/kernel/config/usb_gadget";
 const DEVICE_DIR: &str = "/sys/kernel/config/usb_gadget/raspi";
 const ENG_STR_DIR: &str = "/sys/kernel/config/usb_gadget/raspi/strings/0x409";
 const CONFIGS_DIR: &str = "/sys/kernel/config/usb_gadget/raspi/configs/c.1";
 const FNC_HID_DIR: &str = "/sys/kernel/config/usb_gadget/raspi/functions/hid.usb0";
 
-/// - `b_length` (Size of this descriptor) is always **18 bytes**
-/// - fields starting with `struct_` are not taken from the official usb.org documentation
-pub struct UsbDeviceDescriptor<'a> {
-    // pub b_descriptor_type: u8,       // Device descriptor type (assigned by USB)                 | Set by gadget driver
-    // pub b_num_configurations: u8,    // How many configuration does this device have             | Set by gadget driver
-    // pub i_manufacturer: u8,          // Index of String descriptor describing manufacturer.      | Set by gadget driver according to contents of /strings
-    // pub i_product: u8,               // Index of string descriptor describing product.           | Set by gadget driver according to contents of /strings
-    // pub i_serial_number: u8,         // Index of String descriptor describing the device’s       | Set by gadget driver according to contents of /strings
+pub struct UsbGadgetDescriptor<'a> {
     pub bcd_usb: u16,           // USB HID Specification Release 1.0.                               | 0x200 = 2.00
     pub b_device_class: u8,     // class code                                                       | 0x00 for HID
     pub b_device_sub_class: u8, // subclass code                                                    | 0x00 for HID
@@ -41,24 +33,25 @@ pub struct UsbDeviceDescriptor<'a> {
     pub id_vendor: u16,         //
     pub id_product: u16,        //
     pub bcd_device: u16,        // Device release number (assigned by manufacturer)                 | 0x100 = 1.00
-    pub struct_strings: UsbDeviceStrings<'a>,
-    pub struct_configuration: UsbConfigurationDescriptor,
+    pub strings_0x409: UsbGadgetStrings<'a>,
+    pub configs_c1: UsbGadgetConfigs,
+    pub functions_hid: UsbGadgetFunctionsHid,
 }
 
 // TODO Validate this from host side:
 // echo 100 > file   appends a \n at the end of the file. writing with file.write_all does not do that,
 // but this should be irrelevant because the driver will probably read the data
 
-impl UsbDeviceDescriptor<'_> {
+impl UsbGadgetDescriptor<'_> {
     /// Using linux' ConfigFS, create the given usb device
     pub fn configure_device(&self) {
         self.create_directories();
+
         self.write_to_disk();
-        self.struct_configuration.write_to_disk();
-        self.struct_configuration.struct_interface.write_to_disk();
-        self.struct_configuration.struct_interface.struct_hid_device.write_to_disk();
-        self.struct_configuration.struct_interface.struct_endpoint_in.write_to_disk();
-        self.struct_configuration.struct_interface.struct_endpoint_out.write_to_disk();
+        self.configs_c1.write_to_disk();
+        self.functions_hid.write_to_disk();
+
+        self.assign_fn_to_config();
         self.bind_to_udc();
     }
 
@@ -70,17 +63,24 @@ impl UsbDeviceDescriptor<'_> {
         };
 
         // Strings
-        // The system / driver already creates the directory "strings"
+        // The system already creates the directory "strings"
         match run_cmd("/sys/kernel/config/usb_gadget/raspi/strings", "mkdir 0x409") {
             Ok(_) => (),
             Err(_) => print_and_exit("Could not create directory /sys/kernel/config/usb_gadget/raspi/strings/0x409", 9),
         };
 
         // Configuration
-        // The system / driver already creates the directory "configs"
+        // The system already creates the directory "configs"
         match run_cmd("/sys/kernel/config/usb_gadget/raspi/configs", "mkdir c.1") {
             Ok(_) => (),
             Err(_) => print_and_exit("Could not create directory /sys/kernel/config/usb_gadget/raspi/configs/c.1", 9),
+        };
+
+        // Functions
+        // The system already creates the directory "functions"
+        match run_cmd("/sys/kernel/config/usb_gadget/raspi/functions", "mkdir hid.usb0") {
+            Ok(_) => (),
+            Err(_) => print_and_exit("Could not create directory /sys/kernel/config/usb_gadget/raspi/functions/hid.usb0", 9),
         };
     }
 
@@ -200,6 +200,13 @@ impl UsbDeviceDescriptor<'_> {
         };
     }
 
+    fn assign_fn_to_config(&self) {
+        match run_cmd(DEVICE_DIR, "ln -s functions/hid.usb0/ configs/c.1/") {
+            Ok(_) => (),
+            Err(_) => print_and_exit("Could not link functions (functions/hid.usb0/) to configs (configs/c.1/)", 14),
+        }
+    }
+
     fn bind_to_udc(&self) {
         let output = match Command::new("ls").arg("/sys/class/udc").output() {
             Ok(output) => output,
@@ -243,13 +250,16 @@ impl UsbDeviceDescriptor<'_> {
     }
 }
 
-pub struct UsbDeviceStrings<'a> {
-    pub serialnumber: &'a str, // can be empty
-    pub product: &'a str,      // can be empty
-    pub manufacturer: &'a str, // can be empty
+pub struct UsbGadgetStrings<'a> {
+    /// can be empty
+    pub serialnumber: &'a str,
+    /// can be empty
+    pub product: &'a str,
+    /// can be empty
+    pub manufacturer: &'a str,
 }
 
-impl UsbDeviceStrings<'_> {
+impl UsbGadgetStrings<'_> {
     /// Writes the contents of each string into the corresponding file, if the string is not empty
     ///
     /// **Exits** as soon as one write operation is not successful
@@ -286,20 +296,23 @@ impl UsbDeviceStrings<'_> {
     }
 }
 
-/// - `b_length` (Size of this descriptor) is always **9 bytes**
-/// - fields starting with `struct_` are not taken from the official usb.org documentation
-pub struct UsbConfigurationDescriptor {
-    // pub b_descriptor_type: u8,       // Configuration (assigned by USB).                         | Set by gadget driver
-    // pub w_total_length: u16,         // Total length of data returned (see page 77)              | Set by gadget driver
-    // pub b_num_interfaces: u8,        // Number of interfaces supported                           | Set by gadget driver
-    // pub b_configuration_value: u8,   // basically the id of this configuration                   | Set by gadget driver
-    // pub i_configuration: u8,         // Index of string descriptor for this configuration        | Set by gadget driver
-    pub bm_attributes: u8, // bit8=Bus Powered  bit7=Self Powered  bit6=Remote Wakeup               | 0xc0 = 1100 0000 == self and bus powered
-    pub max_power: u8,     // Maximum power consumption in 2mA STEPS!!                              | 0xFA = 250 decimal == 500mA
-    pub struct_interface: UsbInterfaceDescriptor,
+pub struct UsbGadgetConfigs {
+    /// Left most bit always has to be set or file write is not permitted
+    ///
+    /// Allowed values are:
+    /// - `1110 0000 = 224 = 0xE0`    Bus powered & Self powered & Remote Wakeup
+    /// - `1100 0000 = 192 = 0xC0`    Bus powered & Self powered
+    /// - `1000 0000 = 128 = 0x80`    Bus powered
+    ///
+    /// What these bits mean is from usb.org documentation, but kernel implementation might have changed that
+    pub bm_attributes: u8,
+
+    /// According to usb.org documentation this is in 2mA steps, so a value of `120` means 240mA..
+    /// Yet again, unsure what the kernel interprets this as because the default value is 2
+    pub max_power: u8,
 }
 
-impl UsbConfigurationDescriptor {
+impl UsbGadgetConfigs {
     fn write_to_disk(&self) {
         match File::options()
             .create(true)
@@ -328,83 +341,108 @@ impl UsbConfigurationDescriptor {
             },
             Err(_) => print_and_exit("Could not open file MaxPower", 13),
         }
+
+        // TODO This might not be neccessary and is also not represented in struct
+        match run_cmd("/sys/kernel/config/usb_gadget/raspi/configs/c.1", "mkdir -p strings/0x409") {
+            Ok(_) => (),
+            Err(_) => print_and_exit("Could not create directory /sys/kernel/config/usb_gadget/raspi/configs/c.1/strings/0x409", 14),
+        };
+
+        match File::options()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&(CONFIGS_DIR.to_string() + "/strings/0x409/configuration"))
+        {
+            Ok(mut file) => match file.write_all(&"Configuration 1".as_bytes()) {
+                Ok(_) => (),
+                Err(_) => print_and_exit("Could not write to file configuration", 12),
+            },
+            Err(_) => print_and_exit("Could not open file configuration", 13),
+        }
     }
 }
 
-/// - `b_length` (Size of this descriptor) is always **9 bytes**
-/// - fields starting with `struct_` are not taken from the official usb.org documentation
-pub struct UsbInterfaceDescriptor {
-    pub b_descriptor_type: u8,     // Interface descriptor type (assigned by USB)                   | 0x04
-    pub b_interface_number: u8,    // Interface Counter (zero based)                                | 0x00
-    pub b_alternate_setting: u8,   // Value used to select alternate setting                        | 0x00
-    pub b_num_endpoints: u8,       // Nr of endpoints used (excluding endpoint zero)                | 0x02 (PS5 has two, IN and OUT)
-    pub b_interface_class: u8,     // Class code (assigned by USB).                                 | always 0x03 for HID devices
-    pub b_interface_sub_class: u8, // 0 = None  1 = Boot Interface Subclass                         | 0x00
-    pub b_interface_protocol: u8,  // 0 = None  1 = Keyboard  2 = Mouse                             | 0x00
-    pub i_interface: u8,           // Index of string descriptor describing this interface          | 0x00
-    pub struct_hid_device: UsbHidDeviceDescriptor,
-    pub struct_endpoint_in: UsbEndpointDescriptor,
-    pub struct_endpoint_out: UsbEndpointDescriptor,
+/// This represents everything that has to be written into the directory .../usb_gadget/NAME/functions/hid.usb0/
+pub struct UsbGadgetFunctionsHid {
+    /// HID protocol to use
+    ///
+    /// Default is `0`, Keyboard is `1`, Mouse might be `2`
+    pub protocol: u8,
+
+    /// data to be used in HID reports, except data passed with /dev/hidg<X>
+    pub report_descriptor: &'static [u8],
+
+    /// This is NOT the length of the report descriptor!
+    pub report_length: u16, // Total length of Report descriptor          | 0x111 = 273
+
+    /// HID subclass to use
+    ///
+    /// Default is `0`, Keyboard is `1`
+    ///
+    /// usb.org specification says `1` would mean boot interface
+    pub hid_subclass: u8,
 }
 
-impl UsbInterfaceDescriptor {
-    fn write_to_disk(&self) {}
+impl UsbGadgetFunctionsHid {
+    fn write_to_disk(&self) {
+        // protocol
+        match File::options()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&(FNC_HID_DIR.to_string() + "/protocol"))
+        {
+            Ok(mut file) => match file.write_all(&self.protocol.to_string().as_bytes()) {
+                Ok(_) => (),
+                Err(_) => print_and_exit("Could not write to file protocol", 12),
+            },
+            Err(_) => print_and_exit("Could not open file protocol", 13),
+        }
+
+        // report_length
+        match File::options()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&(FNC_HID_DIR.to_string() + "/report_length"))
+        {
+            Ok(mut file) => match file.write_all(&self.report_length.to_string().as_bytes()) {
+                Ok(_) => (),
+                Err(_) => print_and_exit("Could not write to file report_length", 12),
+            },
+            Err(_) => print_and_exit("Could not open file report_length", 13),
+        }
+
+        // subclass
+        match File::options()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&(FNC_HID_DIR.to_string() + "/subclass"))
+        {
+            Ok(mut file) => match file.write_all(&self.hid_subclass.to_string().as_bytes()) {
+                Ok(_) => (),
+                Err(_) => print_and_exit("Could not write to file subclass", 12),
+            },
+            Err(_) => print_and_exit("Could not open file subclass", 13),
+        }
+
+        // report_desc
+        match File::options()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&(FNC_HID_DIR.to_string() + "/report_desc"))
+        {
+            Ok(mut file) => match file.write_all(&self.report_descriptor) {
+                Ok(_) => (),
+                Err(_) => print_and_exit("Could not write to file report_desc", 12),
+            },
+            Err(_) => print_and_exit("Could not open file report_desc", 13),
+        }
+    }
 }
-
-/// - `b_length` (Size of this descriptor) is always **9 bytes**
-pub struct UsbHidDeviceDescriptor {
-    pub b_descriptor_type: u8, // HID descriptor type (assigned by USB).                            | 0x21 = 32
-    pub bcd_hid: u16,          // HID Class Specification release number                            | 0x111 = 1.11
-    pub b_country_code: u8,    // Hardware target country                                           | 0x00
-    pub b_num_descriptors: u8, // Number of HID class descriptors to follow                         | 0x01
-
-    /// this is also called bDescriptorType in the docu.. quite confusing
-    pub b_descriptor_type_report: u8, // Report descriptor type                                     | 0x22 = 33
-    pub w_descriptor_length: u16, // Total length of Report descriptor                              | 0x111 = 273
-}
-
-impl UsbHidDeviceDescriptor {
-    fn write_to_disk(&self) {}
-}
-
-/// - `b_length` (Size of this descriptor) is always **7 bytes**
-pub struct UsbEndpointDescriptor {
-    pub b_descriptor_type: u8,  // Endpoint descriptor type (assigned by USB).                          | 0x05
-    pub b_endpoint_address: u8, // TODO Explanation below, this might get set by linux gadget drivers   | 0x84  EP 4 IN
-    pub bm_attributes: u8,      // Explanation below                                                    | 00000011 = 3
-    pub w_max_packet_size: u8,  // max packet size                                                      | 0x0040 = 64 bytes
-    pub b_interval: u8,         // in ms                                                                | 0x06
-}
-
-impl UsbEndpointDescriptor {
-    fn write_to_disk(&self) {}
-}
-/* bEndpointAddress explained
- *
- * The address of the endpoint on the USB device
- * described by this descriptor. The address is encoded as
- * follows:
- *
- * Bit 0..3 The endpoint number
- * Bit 4..6 Reserved, reset to zero
- * Bit 7 Direction, ignored for
- * Control endpoints:
- * 0 - OUT endpoint
- * 1 - IN endpoint
- */
-
-/* bmAttributes explained
- *
- * This field describes the endpoint’s attributes when it is
- * configured using the bConfigurationValue.
- *
- * Bit 0..1     Transfer type:
- * 00           Control
- * 01           Isochronous
- * 10           Bulk
- * 11           Interrupt
- * All other bits are reserved.
- */
 
 /*
     #!/bin/bash
