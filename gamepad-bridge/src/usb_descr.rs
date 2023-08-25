@@ -26,13 +26,13 @@ pub struct UsbDeviceDescriptor {
     pub i_product: u8,            // TODO Index of string descriptor describing product.            | How can you set this?
     pub i_serial_number: u8,      // Index of String descriptor describing the device’s             | 0x00 for no serial number
     pub b_num_configurations: u8, // How many configuration does this device have                   | in this case, 0x01
-    // pub struct_strings: UsbDeviceStrings,
     pub struct_configuration: UsbConfigurationDescriptor,
 }
 
-// TODO use
 pub struct UsbDeviceStrings<'a> {
     pub serialnumber: &'a str,
+    pub product: &'a str,
+    pub manufacturer: &'a str,
 }
 
 /// - `b_length` (Size of this descriptor) is always **9 bytes**

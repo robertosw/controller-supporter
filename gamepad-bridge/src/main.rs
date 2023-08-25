@@ -18,25 +18,23 @@ mod bluetooth_fn;
 mod hidapi_fn;
 mod hidapi_read_ps5_usb;
 mod hidapi_structs;
-mod usb_gadget;
 mod usb_descr;
+mod usb_gadget;
 mod usb_gadget_old;
 mod usb_gamepads;
 
 use crate::bluetooth_fn::*;
 use crate::hidapi_fn::*;
-use crate::usb_gamepads::PS5_GAMEPAD;
+use crate::usb_gamepads::*;
 
 // lsusb   udevadm monitor       minicom
 
 fn main() {
     println!("\nGamepad-Bridge started: v{:}\n", version!());
 
-    // TODO Ensure that this is always run as sudo! Exit if not 
+    // TODO Ensure that this is always run as sudo! Exit if not
 
-    // write_files();
-
-    usb_gadget::enable_gadget_mode(PS5_GAMEPAD, "", "manufacturer", "product");
+    usb_gadget::enable_gadget_mode(PS5_GAMEPAD, PS5_DEVICE_STRINGS);
 
     exit(0);
 

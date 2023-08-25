@@ -2,6 +2,12 @@ use crate::usb_descr::*;
 
 const PS5_REPORT_DESCRIPTOR_SIZE: u16 = 273;
 
+pub const PS5_DEVICE_STRINGS: UsbDeviceStrings = UsbDeviceStrings {
+    manufacturer: "Sony Interactive Entertainment",
+    product: "Wireless Controller",
+    serialnumber: "",
+};
+
 pub const PS5_GAMEPAD: UsbDeviceDescriptor = UsbDeviceDescriptor {
     b_descriptor_type: 1,
     bcd_usb: 0x200,

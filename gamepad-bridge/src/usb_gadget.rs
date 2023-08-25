@@ -4,7 +4,10 @@ use std::{
     process::{exit, Command},
 };
 
-use crate::{run_cmd, usb_descr::UsbDeviceDescriptor};
+use crate::{
+    run_cmd,
+    usb_descr::{UsbDeviceDescriptor, UsbDeviceStrings},
+};
 
 // TODO Validate this from host side:
 // echo 100 > file   appends a \n at the end of the file. writing with file.write_all does not do that,
@@ -17,7 +20,7 @@ const CONFIGS_DIR: &str = "/sys/kernel/config/usb_gadget/raspi/configs/c.1";
 const FNC_HID_DIR: &str = "/sys/kernel/config/usb_gadget/raspi/functions/hid.usb0";
 
 /// Using linux' ConfigFS, create the given usb device
-pub fn enable_gadget_mode(device: UsbDeviceDescriptor, serialnumber: &str, manufacturer: &str, product: &str) {
+pub fn enable_gadget_mode(device: UsbDeviceDescriptor, device_strings: UsbDeviceStrings) {
     // TODO ConfigurationStrings
     // After creating any directory inside /sys/kernel/config/usb_gadget the system creates some basic structure.
     // This structure does not cover all the possible field. Non-existent are:
@@ -41,10 +44,10 @@ pub fn enable_gadget_mode(device: UsbDeviceDescriptor, serialnumber: &str, manuf
         }
     };
 
-    // match write_strings(serialnumber, manufacturer, product) {
-    //     Ok(_) => (),
-    //     Err(_) => (),
-    // };
+    match write_strings(device_strings) {
+        Ok(_) => (),
+        Err(_) => (),
+    };
 
     match bind_to_udc() {
         Ok(_) => (),
@@ -111,15 +114,15 @@ fn write_device_descriptor(device: &UsbDeviceDescriptor) -> Result<(), &str> {
     match File::create(&(DEVICE_DIR.to_string() + "/bcdDevice")) {
         Ok(mut file) => match file.write_all(&device.bcd_device.to_string().as_bytes()) {
             Ok(_) => (),
-            Err(_) => return Err("Could write to file bcdUSB"),
+            Err(_) => return Err("Could not write to file bcdDevice"),
         },
-        Err(_) => return Err("Could not open file bcdUSB"),
+        Err(_) => return Err("Could not open file bcdDevice"),
     };
 
     match File::create(&(DEVICE_DIR.to_string() + "/bcdUSB")) {
         Ok(mut file) => match file.write_all(&device.bcd_usb.to_string().as_bytes()) {
             Ok(_) => (),
-            Err(_) => return Err("Could write to file bcdUSB"),
+            Err(_) => return Err("Could not write to file bcdUSB"),
         },
         Err(_) => return Err("Could not open file bcdUSB"),
     };
@@ -127,68 +130,87 @@ fn write_device_descriptor(device: &UsbDeviceDescriptor) -> Result<(), &str> {
     match File::create(&(DEVICE_DIR.to_string() + "/bDeviceClass")) {
         Ok(mut file) => match file.write_all(&device.b_device_class.to_string().as_bytes()) {
             Ok(_) => (),
-            Err(_) => return Err("Could write to file bcdUSB"),
+            Err(_) => return Err("Could not write to file bDeviceClass"),
         },
-        Err(_) => return Err("Could not open file bcdUSB"),
+        Err(_) => return Err("Could not open file bDeviceClass"),
     };
 
     match File::create(&(DEVICE_DIR.to_string() + "/bDeviceSubClass")) {
         Ok(mut file) => match file.write_all(&device.b_device_sub_class.to_string().as_bytes()) {
             Ok(_) => (),
-            Err(_) => return Err("Could write to file bcdUSB"),
+            Err(_) => return Err("Could not write to file bDeviceSubClass"),
         },
-        Err(_) => return Err("Could not open file bcdUSB"),
+        Err(_) => return Err("Could not open file bDeviceSubClass"),
     };
 
     match File::create(&(DEVICE_DIR.to_string() + "/bDeviceProtocol")) {
         Ok(mut file) => match file.write_all(&device.b_device_protocol.to_string().as_bytes()) {
             Ok(_) => (),
-            Err(_) => return Err("Could write to file bcdUSB"),
+            Err(_) => return Err("Could not write to file bDeviceProtocol"),
         },
-        Err(_) => return Err("Could not open file bcdUSB"),
+        Err(_) => return Err("Could not open file bDeviceProtocol"),
     };
 
     match File::create(&(DEVICE_DIR.to_string() + "/bMaxPacketSize0")) {
         Ok(mut file) => match file.write_all(&device.b_max_packet_size0.to_string().as_bytes()) {
             Ok(_) => (),
-            Err(_) => return Err("Could write to file bcdUSB"),
+            Err(_) => return Err("Could not write to file bMaxPacketSize0"),
         },
-        Err(_) => return Err("Could not open file bcdUSB"),
+        Err(_) => return Err("Could not open file bMaxPacketSize0"),
     };
 
     match File::create(&(DEVICE_DIR.to_string() + "/idVendor")) {
         Ok(mut file) => match file.write_all(&device.id_vendor.to_string().as_bytes()) {
             Ok(_) => (),
-            Err(_) => return Err("Could write to file bcdUSB"),
+            Err(_) => return Err("Could not write to file idVendor"),
         },
-        Err(_) => return Err("Could not open file bcdUSB"),
+        Err(_) => return Err("Could not open file idVendor"),
     };
 
     match File::create(&(DEVICE_DIR.to_string() + "/idProduct")) {
         Ok(mut file) => match file.write_all(&device.id_product.to_string().as_bytes()) {
             Ok(_) => (),
-            Err(_) => return Err("Could write to file bcdUSB"),
+            Err(_) => return Err("Could not write to file idProduct"),
         },
-        Err(_) => return Err("Could not open file bcdUSB"),
+        Err(_) => return Err("Could not open file idProduct"),
     };
 
     return Ok(());
 }
+
+/// Writes the contents of each string into the corresponding file, if the string is not empty
 ///
-fn write_strings(_serialnumber: &str, manufacturer: &str, product: &str) -> Result<(), ()> {
-    // TODO dynamically write or dont write (ORDER IS IMPORTANT!)
-    // match run_cmd(ENG_STR_DIR, format!("echo {} > serialnumber", serialnumber)) {
-    //     Ok(_) => (),
-    //     Err(_) => return Err(()),
-    // };
-    // match run_cmd(ENG_STR_DIR, format!("echo -n {} > manufacturer", manufacturer)) {
-    //     Ok(_) => (),
-    //     Err(_) => return Err(()),
-    // };
-    // match run_cmd(ENG_STR_DIR, format!("echo -n {} > product", product)) {
-    //     Ok(_) => (),
-    //     Err(_) => return Err(()),
-    // };
+/// Returns with `Err` as soon as one write operation is not successful
+fn write_strings(device_strings: UsbDeviceStrings) -> Result<(), &str> {
+    if !device_strings.manufacturer.is_empty() {
+        match File::create(&(ENG_STR_DIR.to_string() + "/manufacturer")) {
+            Ok(mut file) => match file.write_all(device_strings.manufacturer.as_bytes()) {
+                Ok(_) => (),
+                Err(_) => return Err("Could not write to file manufacturer"),
+            },
+            Err(_) => return Err("Could not open file manufacturer"),
+        };
+    }
+
+    if !device_strings.product.is_empty() {
+        match File::create(&(ENG_STR_DIR.to_string() + "/product")) {
+            Ok(mut file) => match file.write_all(device_strings.product.as_bytes()) {
+                Ok(_) => (),
+                Err(_) => return Err("Could not write to file product"),
+            },
+            Err(_) => return Err("Could not open file product"),
+        };
+    }
+
+    if !device_strings.serialnumber.is_empty() {
+        match File::create(&(ENG_STR_DIR.to_string() + "/serialnumber")) {
+            Ok(mut file) => match file.write_all(device_strings.serialnumber.as_bytes()) {
+                Ok(_) => (),
+                Err(_) => return Err("Could not write to file serialnumber"),
+            },
+            Err(_) => return Err("Could not open file serialnumber"),
+        };
+    }
 
     return Ok(());
 }
