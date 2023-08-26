@@ -16,8 +16,7 @@ use std::{
     process::{exit, Command},
 };
 
-use crate::print_and_exit;
-use crate::run_cmd;
+use crate::helper_fn::{print_and_exit, run_cmd};
 
 const DEVICE_DIR: &str = "/sys/kernel/config/usb_gadget/raspi";
 const ENG_STR_DIR: &str = "/sys/kernel/config/usb_gadget/raspi/strings/0x409";
@@ -85,14 +84,18 @@ impl UsbGadgetDescriptor<'_> {
             Err(_) => print_and_exit("Could not create directory /sys/kernel/config/usb_gadget/raspi/functions/hid.usb0", 9),
         };
     }
-
-    /// Writes the data of `device` into the files `bcdDevice`, `bcdUSB`, `bDeviceClass`, `bDeviceSubClass`, `bDeviceProtocol`, `bMaxPacketSize0`, `idVendor`, `idProduct`
+    
+    /// Writes the data of `UsbGadgetDescriptor` into the files `bcdDevice`, `bcdUSB`, `bDeviceClass`, `bDeviceSubClass`, `bDeviceProtocol`, `bMaxPacketSize0`, `idVendor`, `idProduct`
+    ///
+    /// Will exit if any operation is not successful
     ///
     /// <br>
     ///
     /// ### Why only these and not all?
     /// After creating any directory inside `/sys/kernel/config/usb_gadget` the system creates some basic structure.
-    /// This structure does not cover all the possible field. Non-existent are:
+    /// This structure does not cover all the possible fields. 
+    /// 
+    /// Comparing to usb.org specification, non-existent fields are:
     /// `bLength`, `bDescriptorType`, `iManufacturer`, `iProduct`, `iSerialNumber`, `bNumConfigurations`
     ///
     /// This implies that some of the work is done by the driver.
