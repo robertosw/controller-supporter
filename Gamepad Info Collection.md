@@ -84,6 +84,7 @@ Wireless Controller:
 2. `lsusb -vd vendor:product`
 
 ### PS5 Gamepad via USB
+
 ```YAML
 Bus 001 Device 007: ID 054c:0ce6 Sony Corp. Wireless Controller
 Device Descriptor:
@@ -167,6 +168,37 @@ can't get debug descriptor: Resource temporarily unavailable
 Device Status:     0x0000
   (Bus Powered)
 
+```
+### Comparison actual PS5 Gamepad (-) and mirrored PS5 Gamepad (+)
+```diff
+Device Descriptor:
+-  iSerial                 0 
++  iSerial                 3                    // Might be fixable by not writing any string to serialnumber
+  Configuration Descriptor:
+-    wTotalLength       0x00e3
+-    bNumInterfaces          4
+-    iConfiguration          0 
++    wTotalLength       0x0029
++    bNumInterfaces          1
++    iConfiguration          4                  // Might be fixable by not writing any string to configs
+    Interface Descriptor:
+-      bInterfaceNumber        3
+-      iInterface              0
++      bInterfaceNumber        0
++      iInterface              5 HID Interface
+        HID Device Descriptor:
+-          bcdHID               1.11
++          bcdHID               1.01
+      Endpoint Descriptor:
+-        bEndpointAddress     0x84  EP 4 IN     
+-        bInterval               6
++        bEndpointAddress     0x81  EP 1 IN     // These might change automatically if you add audio Interfaces
++        bInterval               4
+      Endpoint Descriptor:
+-        bEndpointAddress     0x03  EP 3 OUT
+-        bInterval               6
++        bEndpointAddress     0x01  EP 1 OUT    // These might change automatically if you add audio Interfaces
++        bInterval               4        
 ```
 
 <br>

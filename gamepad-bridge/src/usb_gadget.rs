@@ -226,6 +226,8 @@ pub struct UsbGadgetStrings<'a> {
 }
 
 impl UsbGadgetStrings<'_> {
+    // TODO if empty, dont write
+
     /// Writes the contents of each string into the corresponding file, if the string is not empty
     ///
     /// **Exits** as soon as one write operation is not successful
@@ -267,9 +269,8 @@ pub struct UsbGadgetConfigs<'a> {
     /// What these bits mean is from usb.org documentation, but kernel implementation might have changed that
     pub bm_attributes: u8,
 
-    /// According to usb.org documentation this is in 2mA steps, so a value of `120` means 240mA..
-    /// Yet again, unsure what the kernel interprets this as because the default value is 2
-    pub max_power: u8,
+    /// Max value is 500mA, because thats how USB works
+    pub max_power: u16,
 
     pub configs_string: &'a str,
 }
@@ -293,6 +294,8 @@ impl UsbGadgetConfigs<'_> {
             },
             Err(_) => print_and_exit("Could not open file MaxPower", 13),
         }
+
+        // TODO if empty, dont write
 
         match File::options()
             .write(true)

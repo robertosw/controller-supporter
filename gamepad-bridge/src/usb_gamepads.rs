@@ -16,7 +16,7 @@ pub const PS5_GAMEPAD: UsbGadgetDescriptor = UsbGadgetDescriptor {
     },
     configs_c1: UsbGadgetConfigs {
         bm_attributes: 0b11000000,
-        max_power: 0,
+        max_power: 500,
         configs_string: "",
     },
     functions_hid: UsbGadgetFunctionsHid {
