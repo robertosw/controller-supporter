@@ -39,7 +39,8 @@ fn main() {
     // usb 1-2: device descriptor read/64, error -110
     // usb usb1-port2: unable to enumerate USB device
 
-    PS5_GAMEPAD.configure_device();
+    // PS5_GAMEPAD.configure_device();
+    GENERIC_KEYBOARD.configure_device();
 
     exit(0);
 
@@ -68,6 +69,8 @@ fn main() {
     }
 
     // TODO Check if hidg0 device exists
+
+    // TODO Retry hidg crate
 
     // TODO Write to hidg0 device manually (example)
     // sudo su

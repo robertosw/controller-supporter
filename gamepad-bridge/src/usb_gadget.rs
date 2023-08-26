@@ -34,13 +34,9 @@ pub struct UsbGadgetDescriptor<'a> {
     pub id_product: u16,        //
     pub bcd_device: u16,        // Device release number (assigned by manufacturer)                 | 0x100 = 1.00
     pub strings_0x409: UsbGadgetStrings<'a>,
-    pub configs_c1: UsbGadgetConfigs,
+    pub configs_c1: UsbGadgetConfigs<'a>,
     pub functions_hid: UsbGadgetFunctionsHid,
 }
-
-// TODO Validate this from host side:
-// echo 100 > file   appends a \n at the end of the file. writing with file.write_all does not do that,
-// but this should be irrelevant because the driver will probably read the data
 
 impl UsbGadgetDescriptor<'_> {
     /// Using linux' ConfigFS, create the given usb device
@@ -49,6 +45,7 @@ impl UsbGadgetDescriptor<'_> {
 
         self.write_to_disk();
         self.configs_c1.write_to_disk();
+        self.strings_0x409.write_to_disk();
         self.functions_hid.write_to_disk();
 
         self.assign_fn_to_config();
@@ -74,6 +71,11 @@ impl UsbGadgetDescriptor<'_> {
         match run_cmd("/sys/kernel/config/usb_gadget/raspi/configs", "mkdir c.1") {
             Ok(_) => (),
             Err(_) => print_and_exit("Could not create directory /sys/kernel/config/usb_gadget/raspi/configs/c.1", 9),
+        };
+
+        match run_cmd("/sys/kernel/config/usb_gadget/raspi/configs/c.1", "mkdir -p strings/0x409") {
+            Ok(_) => (),
+            Err(_) => print_and_exit("Could not create directory /sys/kernel/config/usb_gadget/raspi/configs/c.1/strings/0x409", 14),
         };
 
         // Functions
@@ -264,39 +266,33 @@ impl UsbGadgetStrings<'_> {
     ///
     /// **Exits** as soon as one write operation is not successful
     fn write_to_disk(&self) {
-        if !&self.manufacturer.is_empty() {
-            match File::create(&(ENG_STR_DIR.to_string() + "/manufacturer")) {
-                Ok(mut file) => match file.write_all(&self.manufacturer.as_bytes()) {
-                    Ok(_) => (),
-                    Err(_) => print_and_exit("Could not write to file manufacturer", 14),
-                },
-                Err(_) => print_and_exit("Could not open file manufacturer", 15),
-            };
-        }
+        match File::create(&(ENG_STR_DIR.to_string() + "/manufacturer")) {
+            Ok(mut file) => match file.write_all(&self.manufacturer.as_bytes()) {
+                Ok(_) => (),
+                Err(_) => print_and_exit("Could not write to file manufacturer", 14),
+            },
+            Err(_) => print_and_exit("Could not open file manufacturer", 15),
+        };
 
-        if !&self.product.is_empty() {
-            match File::create(&(ENG_STR_DIR.to_string() + "/product")) {
-                Ok(mut file) => match file.write_all(&self.product.as_bytes()) {
-                    Ok(_) => (),
-                    Err(_) => print_and_exit("Could not write to file product", 14),
-                },
-                Err(_) => print_and_exit("Could not open file product", 15),
-            };
-        }
+        match File::create(&(ENG_STR_DIR.to_string() + "/product")) {
+            Ok(mut file) => match file.write_all(&self.product.as_bytes()) {
+                Ok(_) => (),
+                Err(_) => print_and_exit("Could not write to file product", 14),
+            },
+            Err(_) => print_and_exit("Could not open file product", 15),
+        };
 
-        if !&self.serialnumber.is_empty() {
-            match File::create(&(ENG_STR_DIR.to_string() + "/serialnumber")) {
-                Ok(mut file) => match file.write_all(&self.serialnumber.as_bytes()) {
-                    Ok(_) => (),
-                    Err(_) => print_and_exit("Could not write to file serialnumber", 14),
-                },
-                Err(_) => print_and_exit("Could not open file serialnumber", 15),
-            };
-        }
+        match File::create(&(ENG_STR_DIR.to_string() + "/serialnumber")) {
+            Ok(mut file) => match file.write_all(&self.serialnumber.as_bytes()) {
+                Ok(_) => (),
+                Err(_) => print_and_exit("Could not write to file serialnumber", 14),
+            },
+            Err(_) => print_and_exit("Could not open file serialnumber", 15),
+        };
     }
 }
 
-pub struct UsbGadgetConfigs {
+pub struct UsbGadgetConfigs<'a> {
     /// Left most bit always has to be set or file write is not permitted
     ///
     /// Allowed values are:
@@ -310,9 +306,11 @@ pub struct UsbGadgetConfigs {
     /// According to usb.org documentation this is in 2mA steps, so a value of `120` means 240mA..
     /// Yet again, unsure what the kernel interprets this as because the default value is 2
     pub max_power: u8,
+
+    pub configs_string: &'a str,
 }
 
-impl UsbGadgetConfigs {
+impl UsbGadgetConfigs<'_> {
     fn write_to_disk(&self) {
         match File::options()
             .create(true)
@@ -342,19 +340,13 @@ impl UsbGadgetConfigs {
             Err(_) => print_and_exit("Could not open file MaxPower", 13),
         }
 
-        // TODO This might not be neccessary and is also not represented in struct
-        match run_cmd("/sys/kernel/config/usb_gadget/raspi/configs/c.1", "mkdir -p strings/0x409") {
-            Ok(_) => (),
-            Err(_) => print_and_exit("Could not create directory /sys/kernel/config/usb_gadget/raspi/configs/c.1/strings/0x409", 14),
-        };
-
         match File::options()
             .create(true)
             .write(true)
             .truncate(true)
             .open(&(CONFIGS_DIR.to_string() + "/strings/0x409/configuration"))
         {
-            Ok(mut file) => match file.write_all(&"Configuration 1".as_bytes()) {
+            Ok(mut file) => match file.write_all(&self.configs_string.as_bytes()) {
                 Ok(_) => (),
                 Err(_) => print_and_exit("Could not write to file configuration", 12),
             },

@@ -2,4 +2,4 @@ target/
 Cargo.lock
 buildCopy.sh
 bt_scan_out
-_*.md
+_*.*
