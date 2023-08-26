@@ -7,7 +7,6 @@ extern crate version;
 use ctrlc::set_handler;
 use hidapi::HidApi;
 use std::process::exit;
-use std::process::Command;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -15,12 +14,12 @@ use std::thread;
 use std::time::Duration;
 
 mod bluetooth_fn;
+mod helper_fn;
 mod hidapi_fn;
 mod hidapi_read_ps5_usb;
 mod hidapi_structs;
 mod usb_gadget;
 mod usb_gamepads;
-mod helper_fn;
 
 use crate::bluetooth_fn::*;
 use crate::hidapi_fn::*;

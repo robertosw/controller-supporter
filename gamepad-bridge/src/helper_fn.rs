@@ -1,7 +1,7 @@
 use std::process::{exit, Command};
 
-
-pub fn print_and_exit(msg: &str, exit_code: i32) {
+/// Print the given `msg` onto terminal output and exit with given `exit_code`
+pub fn print_and_exit(msg: &str, exit_code: i32) -> ! {
     println!("{msg}");
     exit(exit_code);
 }

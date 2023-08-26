@@ -11,9 +11,9 @@
 */
 
 use std::{
-    fs::File,
+    fs::{self, File},
     io::Write,
-    process::{exit, Command},
+    process::exit,
 };
 
 use crate::helper_fn::{print_and_exit, run_cmd};
@@ -48,7 +48,18 @@ impl UsbGadgetDescriptor<'_> {
         self.functions_hid.write_to_disk();
 
         self.assign_fn_to_config();
-        self.bind_to_udc();
+        match self.bind_to_udc() {
+            Ok(_) => (),
+            Err(err) => {
+                println!("Failed to bind gadget to udc: {:?}", err);
+
+                println!("\n\nIts possible that your Raspberry Pi has not been configured correctly to use the USB Device Controller.");
+                println!("Please take a look at the file Raspberry Pi Setup.md in the GitHub Repo and setup your Raspberry Pi");
+
+                println!("\nThis tool will exit now.");
+                exit(1);
+            }
+        };
     }
 
     /// will exit if any operation is not successful
@@ -84,7 +95,7 @@ impl UsbGadgetDescriptor<'_> {
             Err(_) => print_and_exit("Could not create directory /sys/kernel/config/usb_gadget/raspi/functions/hid.usb0", 9),
         };
     }
-    
+
     /// Writes the data of `UsbGadgetDescriptor` into the files `bcdDevice`, `bcdUSB`, `bDeviceClass`, `bDeviceSubClass`, `bDeviceProtocol`, `bMaxPacketSize0`, `idVendor`, `idProduct`
     ///
     /// Will exit if any operation is not successful
@@ -93,19 +104,14 @@ impl UsbGadgetDescriptor<'_> {
     ///
     /// ### Why only these and not all?
     /// After creating any directory inside `/sys/kernel/config/usb_gadget` the system creates some basic structure.
-    /// This structure does not cover all the possible fields. 
-    /// 
+    /// This structure does not cover all the possible fields.
+    ///
     /// Comparing to usb.org specification, non-existent fields are:
     /// `bLength`, `bDescriptorType`, `iManufacturer`, `iProduct`, `iSerialNumber`, `bNumConfigurations`
     ///
     /// This implies that some of the work is done by the driver.
     fn write_to_disk(&self) {
-        match File::options()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&(DEVICE_DIR.to_string() + "/bcdDevice"))
-        {
+        match File::options().write(true).truncate(true).open(&(DEVICE_DIR.to_string() + "/bcdDevice")) {
             Ok(mut file) => match file.write_all(&self.bcd_device.to_string().as_bytes()) {
                 Ok(_) => (),
                 Err(_) => print_and_exit("Could not write to file bcdDevice", 10),
@@ -113,12 +119,7 @@ impl UsbGadgetDescriptor<'_> {
             Err(_) => print_and_exit("Could not open file bcdDevice", 11),
         };
 
-        match File::options()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&(DEVICE_DIR.to_string() + "/bcdUSB"))
-        {
+        match File::options().write(true).truncate(true).open(&(DEVICE_DIR.to_string() + "/bcdUSB")) {
             Ok(mut file) => match file.write_all(&self.bcd_usb.to_string().as_bytes()) {
                 Ok(_) => (),
                 Err(_) => print_and_exit("Could not write to file bcdUSB", 10),
@@ -126,12 +127,7 @@ impl UsbGadgetDescriptor<'_> {
             Err(_) => print_and_exit("Could not open file bcdUSB", 11),
         };
 
-        match File::options()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&(DEVICE_DIR.to_string() + "/bDeviceClass"))
-        {
+        match File::options().write(true).truncate(true).open(&(DEVICE_DIR.to_string() + "/bDeviceClass")) {
             Ok(mut file) => match file.write_all(&self.b_device_class.to_string().as_bytes()) {
                 Ok(_) => (),
                 Err(_) => print_and_exit("Could not write to file bDeviceClass", 10),
@@ -139,12 +135,7 @@ impl UsbGadgetDescriptor<'_> {
             Err(_) => print_and_exit("Could not open file bDeviceClass", 11),
         };
 
-        match File::options()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&(DEVICE_DIR.to_string() + "/bDeviceSubClass"))
-        {
+        match File::options().write(true).truncate(true).open(&(DEVICE_DIR.to_string() + "/bDeviceSubClass")) {
             Ok(mut file) => match file.write_all(&self.b_device_sub_class.to_string().as_bytes()) {
                 Ok(_) => (),
                 Err(_) => print_and_exit("Could not write to file bDeviceSubClass", 10),
@@ -152,12 +143,7 @@ impl UsbGadgetDescriptor<'_> {
             Err(_) => print_and_exit("Could not open file bDeviceSubClass", 11),
         };
 
-        match File::options()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&(DEVICE_DIR.to_string() + "/bDeviceProtocol"))
-        {
+        match File::options().write(true).truncate(true).open(&(DEVICE_DIR.to_string() + "/bDeviceProtocol")) {
             Ok(mut file) => match file.write_all(&self.b_device_protocol.to_string().as_bytes()) {
                 Ok(_) => (),
                 Err(_) => print_and_exit("Could not write to file bDeviceProtocol", 10),
@@ -165,12 +151,7 @@ impl UsbGadgetDescriptor<'_> {
             Err(_) => print_and_exit("Could not open file bDeviceProtocol", 11),
         };
 
-        match File::options()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&(DEVICE_DIR.to_string() + "/bMaxPacketSize0"))
-        {
+        match File::options().write(true).truncate(true).open(&(DEVICE_DIR.to_string() + "/bMaxPacketSize0")) {
             Ok(mut file) => match file.write_all(&self.b_max_packet_size0.to_string().as_bytes()) {
                 Ok(_) => (),
                 Err(_) => print_and_exit("Could not write to file bMaxPacketSize0", 10),
@@ -178,12 +159,7 @@ impl UsbGadgetDescriptor<'_> {
             Err(_) => print_and_exit("Could not open file bMaxPacketSize0", 11),
         };
 
-        match File::options()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&(DEVICE_DIR.to_string() + "/idVendor"))
-        {
+        match File::options().write(true).truncate(true).open(&(DEVICE_DIR.to_string() + "/idVendor")) {
             Ok(mut file) => match file.write_all(&self.id_vendor.to_string().as_bytes()) {
                 Ok(_) => (),
                 Err(_) => print_and_exit("Could not write to file idVendor", 10),
@@ -191,12 +167,7 @@ impl UsbGadgetDescriptor<'_> {
             Err(_) => print_and_exit("Could not open file idVendor", 11),
         };
 
-        match File::options()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&(DEVICE_DIR.to_string() + "/idProduct"))
-        {
+        match File::options().write(true).truncate(true).open(&(DEVICE_DIR.to_string() + "/idProduct")) {
             Ok(mut file) => match file.write_all(&self.id_product.to_string().as_bytes()) {
                 Ok(_) => (),
                 Err(_) => print_and_exit("Could not write to file idProduct", 10),
@@ -212,46 +183,36 @@ impl UsbGadgetDescriptor<'_> {
         }
     }
 
-    fn bind_to_udc(&self) {
-        let output = match Command::new("ls").arg("/sys/class/udc").output() {
-            Ok(output) => output,
-            Err(error) => {
-                print_and_exit(format!("unwrapping the output failed: {:?}", error).as_str(), 1);
-                return;
-            }
+    fn bind_to_udc(&self) -> Result<(), &str> {
+        let paths = match fs::read_dir("/sys/class/udc") {
+            Ok(paths) => paths,
+            Err(err) => print_and_exit(format!("Error while reading directory /sys/class/udc: {:?}", err).as_str(), 20),
         };
 
-        let udc_name = String::from_utf8(output.stdout).ok().unwrap();
-
-        // if there are multiple udcs (shouldn't be the case on the zero 2), take the first
-        let (first_udc, _) = match udc_name.split_once(char::is_whitespace) {
-            Some((first_udc, remainder)) => (first_udc, remainder),
-            None => {
-                // There are no udc registered
-                println!("\n\nThe Raspberry Pi has not been configured correctly to use the USB Device Controller.");
-                println!("Please run the following commands to configure this:");
-
-                println!("\n $ echo 'dtoverlay=dwc2' | sudo tee -a /boot/config.txt");
-                println!(" $ echo 'dwc2' | sudo tee -a /etc/modules");
-                println!("These two commands should enable the device tree overlay.");
-
-                println!("\n $ sudo echo 'libcomposite' | sudo tee -a /etc/modules");
-                println!("This should enable the libcomposite module at every following boot.");
-
-                println!("\nThis tool will exit now.");
-                println!("After running the commands, check if the values were appended with 'sudo cat /boot/config.txt' and then reboot your Raspberry Pi.");
-
-                exit(1);
-            }
+        let dir_entry = match paths.last() {
+            Some(result) => match result {
+                Ok(dir_entry) => dir_entry,
+                Err(_) => return Err("Error unwrapping DirEntry"),
+            },
+            None => return Err("/sys/class/udc appears to be empty"),
         };
 
-        // run_cmd(format!("sudo sh -c 'echo {first_udc} > {DIR}/{name}/UDC' "));
-        let cmd_string = String::from("sudo sh -c ") + "echo " + first_udc + " > UDC";
-
-        match run_cmd(DEVICE_DIR, cmd_string.as_str()) {
-            Ok(_) => (),
-            Err(_) => print_and_exit("Could not bind device to UDC", 1),
+        // satisfy the borrow checker :)
+        let binding = dir_entry.file_name();
+        let first_udc: &str = match binding.to_str() {
+            Some(str) => str,
+            None => return Err("Failed at transforming DirEntry to str"),
         };
+
+        match File::options().write(true).truncate(true).open(&(DEVICE_DIR.to_string() + "/UDC")) {
+            Ok(mut file) => match file.write_all(&first_udc.as_bytes()) {
+                Ok(_) => (),
+                Err(_) => print_and_exit("Could not write to file UDC", 10),
+            },
+            Err(_) => print_and_exit("Could not open file UDC", 11),
+        };
+
+        return Ok(());
     }
 }
 
@@ -315,12 +276,7 @@ pub struct UsbGadgetConfigs<'a> {
 
 impl UsbGadgetConfigs<'_> {
     fn write_to_disk(&self) {
-        match File::options()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&(CONFIGS_DIR.to_string() + "/bmAttributes"))
-        {
+        match File::options().write(true).truncate(true).open(&(CONFIGS_DIR.to_string() + "/bmAttributes")) {
             Ok(mut file) => match file.write_all(&self.bm_attributes.to_string().as_bytes()) {
                 Ok(_) => (),
                 Err(_) => print_and_exit("Could not write to file bmAttributes", 12),
@@ -330,12 +286,7 @@ impl UsbGadgetConfigs<'_> {
 
         // this value is orignially called bMaxPower (usb.org and in kernel source code)
         // but this file gets created by the driver as soon as a folder is created in /configs
-        match File::options()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&(CONFIGS_DIR.to_string() + "/MaxPower"))
-        {
+        match File::options().write(true).truncate(true).open(&(CONFIGS_DIR.to_string() + "/MaxPower")) {
             Ok(mut file) => match file.write_all(&self.max_power.to_string().as_bytes()) {
                 Ok(_) => (),
                 Err(_) => print_and_exit("Could not write to file MaxPower", 12),
@@ -344,7 +295,6 @@ impl UsbGadgetConfigs<'_> {
         }
 
         match File::options()
-            .create(true)
             .write(true)
             .truncate(true)
             .open(&(CONFIGS_DIR.to_string() + "/strings/0x409/configuration"))
@@ -382,12 +332,7 @@ pub struct UsbGadgetFunctionsHid {
 impl UsbGadgetFunctionsHid {
     fn write_to_disk(&self) {
         // protocol
-        match File::options()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&(FNC_HID_DIR.to_string() + "/protocol"))
-        {
+        match File::options().write(true).truncate(true).open(&(FNC_HID_DIR.to_string() + "/protocol")) {
             Ok(mut file) => match file.write_all(&self.protocol.to_string().as_bytes()) {
                 Ok(_) => (),
                 Err(_) => print_and_exit("Could not write to file protocol", 12),
@@ -396,12 +341,7 @@ impl UsbGadgetFunctionsHid {
         }
 
         // report_length
-        match File::options()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&(FNC_HID_DIR.to_string() + "/report_length"))
-        {
+        match File::options().write(true).truncate(true).open(&(FNC_HID_DIR.to_string() + "/report_length")) {
             Ok(mut file) => match file.write_all(&self.report_length.to_string().as_bytes()) {
                 Ok(_) => (),
                 Err(_) => print_and_exit("Could not write to file report_length", 12),
@@ -410,12 +350,7 @@ impl UsbGadgetFunctionsHid {
         }
 
         // subclass
-        match File::options()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&(FNC_HID_DIR.to_string() + "/subclass"))
-        {
+        match File::options().write(true).truncate(true).open(&(FNC_HID_DIR.to_string() + "/subclass")) {
             Ok(mut file) => match file.write_all(&self.hid_subclass.to_string().as_bytes()) {
                 Ok(_) => (),
                 Err(_) => print_and_exit("Could not write to file subclass", 12),
@@ -424,12 +359,7 @@ impl UsbGadgetFunctionsHid {
         }
 
         // report_desc
-        match File::options()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&(FNC_HID_DIR.to_string() + "/report_desc"))
-        {
+        match File::options().write(true).truncate(true).open(&(FNC_HID_DIR.to_string() + "/report_desc")) {
             Ok(mut file) => match file.write_all(&self.report_descriptor) {
                 Ok(_) => (),
                 Err(_) => print_and_exit("Could not write to file report_desc", 12),
