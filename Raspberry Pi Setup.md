@@ -16,9 +16,18 @@ More info can be found here:
 <br>
 
 Tell linux to use the hardware capabilities of the raspi:
-- `$ echo "dtoverlay=dwc2" | sudo tee -a /boot/config.txt`
+- `$ sudo nano /boot/config.txt`  Open the boot config
+  - Search for a block that starts with a comment and below that comment is `otg_mode=1`. Switch this to `otg_mode=0`
+  - At the end of the file add:
+    ```Shell
+    [all]
+    dtoverlay=dwc2,dr_mode=peripheral
+    ```
+  - Save the file with Ctrl + O, exit with Ctrl + X and reboot immediately (`sudo reboot`)
+  - You can find out more about what device overlays are if you read the `/boot/overlays/README.txt`
 - `$ echo "dwc2" | sudo tee -a /etc/modules`
 - `$ sudo echo "libcomposite" | sudo tee -a /etc/modules`
+
 
 <br>
 
