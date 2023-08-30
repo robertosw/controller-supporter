@@ -7,6 +7,8 @@ use std::{
 use crate::hidapi_structs::*;
 use hidapi::HidDevice;
 
+const HID_ARRAY_SIZE: usize = 48;
+
 /// modifies the given gamepad such that the pressed buttons (xyab for xbox) and dpad buttons are correctly set
 fn eval_byte_8(gamepad: &mut UniversalGamepad, byte8: u8) {
     // ABXY Buttons
@@ -51,7 +53,7 @@ fn eval_byte_8(gamepad: &mut UniversalGamepad, byte8: u8) {
     }
 }
 
-fn interpret_input(input_buf: [u8; 14]) -> UniversalGamepad {
+fn interpret_input(input_buf: [u8; HID_ARRAY_SIZE]) -> UniversalGamepad {
     let mut gamepad: UniversalGamepad = UniversalGamepad {
         sticks: Sticks {
             left: Stick {
@@ -111,12 +113,7 @@ fn interpret_input(input_buf: [u8; 14]) -> UniversalGamepad {
     gamepad
 }
 
-fn terminal_output(
-    benchm_average: Duration,
-    gamepad: UniversalGamepad,
-    show_all_keys: bool,
-    show_benchmark: bool,
-) {
+fn terminal_output(benchm_average: Duration, gamepad: UniversalGamepad, show_all_keys: bool, show_benchmark: bool) {
     let _ = Command::new("clear").status();
 
     if show_benchmark {
@@ -159,13 +156,12 @@ pub fn read_ps5_usb(device: &HidDevice) {
     }
 
     // prepare for data
-    const HID_ARRAY_SIZE: usize = 14;
+
     let mut input_buf = [0 as u8; HID_ARRAY_SIZE];
 
     // prepare benchmark
     const BENCHMARK_SAMPLES: usize = 1000;
-    let mut benchm_durations: [Duration; BENCHMARK_SAMPLES] =
-        [Duration::from_secs(0); BENCHMARK_SAMPLES];
+    let mut benchm_durations: [Duration; BENCHMARK_SAMPLES] = [Duration::from_secs(0); BENCHMARK_SAMPLES];
     let mut benchm_index: usize = 0;
     let mut benchm_average: Duration;
 

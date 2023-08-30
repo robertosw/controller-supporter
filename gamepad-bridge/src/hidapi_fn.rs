@@ -4,7 +4,8 @@ use std::process::exit;
 
 use crate::hidapi_read_ps5_usb::*;
 
-// TODO BT connection and scanning
+// TODO It might be best to be able to create some struct describing how the input should be read
+// that way, once the program is sure which device is connected, the appropriate input intepretation can be applied
 
 /// Returns all supported gamepads, might be 0 <br>
 /// If no gamepads are connected, displays this in terminal and exits program
@@ -34,7 +35,7 @@ pub fn find_supported_gamepads(api: HidApi) -> Vec<DeviceInfo> {
                 // TODO Rewrite function below to support BT and both gamepads
                 println!("Bluetooth is not yet supported");
                 println!("Device name {:?}", device_info.product_string());
-                continue;
+                // continue;
             }
             _ => continue,
         };
@@ -59,9 +60,6 @@ pub fn find_supported_gamepads(api: HidApi) -> Vec<DeviceInfo> {
 
     return gamepads;
 }
-
-// Terminal 1: .../gamepad-bridge/gamepad-bridge$                  clear && cargo build --release
-// Terminal 2: .../gamepad-bridge/gamepad-bridge/target/release$   clear && sudo chown root gamepad-bridge && sudo chmod u+s gamepad-bridge && ./gamepad-bridge
 
 pub fn open_device(device_info: DeviceInfo, api: HidApi) {
     let vid: u16 = 1356;
