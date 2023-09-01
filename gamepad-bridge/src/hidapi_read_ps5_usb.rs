@@ -4,7 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::hidapi_structs::*;
+use crate::hidapi_gamepad::*;
 use hidapi::HidDevice;
 
 const HID_ARRAY_SIZE: usize = 48;
@@ -49,7 +49,7 @@ fn eval_byte_8(gamepad: &mut UniversalGamepad, byte8: u8) {
             gamepad.dpad.up = true;
         }
         8 => (), // no dpad pressed
-        _ => (), // because of & OP this is never the case
+        _ => (), // because of & OP, this is never the case
     }
 }
 
@@ -113,7 +113,7 @@ fn interpret_input(input_buf: [u8; HID_ARRAY_SIZE]) -> UniversalGamepad {
     gamepad
 }
 
-fn terminal_output(benchm_average: Duration, gamepad: UniversalGamepad, show_all_keys: bool, show_benchmark: bool) {
+pub fn terminal_output(benchm_average: Duration, gamepad: UniversalGamepad, show_all_keys: bool, show_benchmark: bool) {
     let _ = Command::new("clear").status();
 
     if show_benchmark {

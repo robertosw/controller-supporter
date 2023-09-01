@@ -1,7 +1,5 @@
 use std::path::PathBuf;
 
-use crate::structs::*;
-
 /// Uses system tools to find controllers in the list of connected devices and adds newly found controllers until the collection is full.
 pub fn get_and_insert_controllers(ctrls: &mut GameControllerCollection) {
     let new_ctrls: Vec<GameControllerSimple> = get_controllers();

@@ -1,9 +1,4 @@
-use crate::hidapi_structs::*;
-
-pub enum GamepadModel {
-    PS5,
-    PS4,
-}
+use crate::{hidapi_fn::GamepadModel, hidapi_gamepad::*};
 
 fn read(model: GamepadModel) {
     let read_input: [u8; 48] = [0 as u8; 48];

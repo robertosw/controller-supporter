@@ -20,21 +20,28 @@ use std::time::Duration;
 mod bluetooth_fn;
 mod helper_fn;
 mod hidapi_fn;
+mod hidapi_gamepad;
 mod hidapi_gamepads;
 mod hidapi_read_ps5_usb;
-mod hidapi_structs;
 mod usb_gadget;
 mod usb_gamepads;
 
 use crate::bluetooth_fn::*;
-use crate::hidapi_fn::*;
+use crate::hidapi_fn::{get_hid_gamepad, process_input};
+use crate::hidapi_gamepad::UniversalGamepad;
 
 // build, then run as root to allow hidraw read
 // clear && cargo build --release && sudo chown root:root target/release/gamepad-bridge && sudo chmod +s target/release/gamepad-bridge && target/release/gamepad-bridge
 
+pub const HID_ARRAY_SIZE: usize = 48;
+
 fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program requires root privilages. Please set uuid accordingly.\n");
+
+    // PS5_GAMEPAD.configure_device();
+    // PS4_GAMEPAD.configure_device();
+    // GENERIC_KEYBOARD.configure_device();
 
     // TODO next steps:
     // 1. generalize the read_ps5_usb function to read from some device
@@ -49,26 +56,48 @@ fn main() {
         }
     };
 
-    let (gamepad, model) = match get_hid_gamepad(&api) {
+    let (device, model) = match get_hid_gamepad(&api) {
         Ok((info, model)) => (info, model),
         Err(_) => exit(1),
     };
 
-    // PS5_GAMEPAD.configure_device();
-    // PS4_GAMEPAD.configure_device();
-    // GENERIC_KEYBOARD.configure_device();
+    // if false, calls to read may return nothing, but also dont block
+    match device.set_blocking_mode(false) {
+        Ok(_) => (),
+        Err(err) => panic!("HidError: {:?}", err),
+    };
+    let mut input_buf = [0 as u8; HID_ARRAY_SIZE];
+    let mut output_gamepad: UniversalGamepad = UniversalGamepad::nothing_pressed();
 
-    exit(0);
+    loop {
+        // setting -1 as timeout means waiting for the next input event, in this mode valid_bytes_count == HID_ARRAY_SIZE
+        // setting 0ms as timeout, probably means sometimes the previous input event is taken, but the execution time of this whole block is 100x faster!
+        // also: reading in blocking mode might be problematic if the gamepad is disconnected => infinite wait
+        let _valid_bytes_count: usize = match device.read_timeout(&mut input_buf[..], 0) {
+            Ok(value) => {
+                if value != HID_ARRAY_SIZE {
+                    continue;
+                } else {
+                    value
+                }
+            }
+            Err(_) => continue,
+        };
 
-    // TODO Check if hidg0 device exists
-
-    // TODO Retry hidg crate
-
-    // TODO Write to hidg0 device manually (example)
-    // sudo su
-    // echo -ne "\0\0\x4\0\0\0\0\0" > /dev/hidg0 #press the A-button
-    // echo -ne "\0\0\0\0\0\0\0\0" > /dev/hidg0 #release all keys
+        let _ = Command::new("clear").status();
+        process_input(input_buf, &model, &mut output_gamepad);
+        thread::sleep(Duration::from_micros(1500)); // <= 1500 is fine for now delay
+    }
 }
+
+// TODO Check if hidg0 device exists
+
+// TODO Retry hidg crate
+
+// TODO Write to hidg0 device manually (example)
+// sudo su
+// echo -ne "\0\0\x4\0\0\0\0\0" > /dev/hidg0 #press the A-button
+// echo -ne "\0\0\0\0\0\0\0\0" > /dev/hidg0 #release all keys
 
 // Ideas for program flow
 // 1. the whole procedure (BT finding, input read, output to usb) is being duplicated for each player right inside main. So 1-4 threads
