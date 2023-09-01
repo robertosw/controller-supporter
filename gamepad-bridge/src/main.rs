@@ -4,6 +4,8 @@
 extern crate version;
 // To allow using the version! macro
 
+extern crate termion;
+
 use ctrlc::set_handler;
 use hidapi::HidApi;
 use std::env;
@@ -21,7 +23,6 @@ mod bluetooth_fn;
 mod helper_fn;
 mod hidapi_fn;
 mod hidapi_gamepad;
-mod hidapi_gamepads;
 mod hidapi_read_ps5_usb;
 mod usb_gadget;
 mod usb_gamepads;
@@ -33,7 +34,7 @@ use crate::hidapi_gamepad::UniversalGamepad;
 // build, then run as root to allow hidraw read
 // clear && cargo build --release && sudo chown root:root target/release/gamepad-bridge && sudo chmod +s target/release/gamepad-bridge && target/release/gamepad-bridge
 
-pub const HID_ARRAY_SIZE: usize = 48;
+pub const HID_ARRAY_SIZE: usize = 75;
 
 fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
@@ -69,6 +70,8 @@ fn main() {
     let mut input_buf = [0 as u8; HID_ARRAY_SIZE];
     let mut output_gamepad: UniversalGamepad = UniversalGamepad::nothing_pressed();
 
+    print!("{}", termion::clear::All);
+
     loop {
         // setting -1 as timeout means waiting for the next input event, in this mode valid_bytes_count == HID_ARRAY_SIZE
         // setting 0ms as timeout, probably means sometimes the previous input event is taken, but the execution time of this whole block is 100x faster!
@@ -78,14 +81,13 @@ fn main() {
                 if value != HID_ARRAY_SIZE {
                     continue;
                 } else {
+                    process_input(input_buf, &model, &mut output_gamepad);
                     value
                 }
             }
             Err(_) => continue,
         };
 
-        let _ = Command::new("clear").status();
-        process_input(input_buf, &model, &mut output_gamepad);
         thread::sleep(Duration::from_micros(1500)); // <= 1500 is fine for now delay
     }
 }

@@ -1,150 +1,11 @@
 use std::{
-    process::Command,
     thread,
     time::{Duration, Instant},
 };
 
-use crate::hidapi_gamepad::*;
 use hidapi::HidDevice;
 
 const HID_ARRAY_SIZE: usize = 48;
-
-/// modifies the given gamepad such that the pressed buttons (xyab for xbox) and dpad buttons are correctly set
-fn eval_byte_8(gamepad: &mut UniversalGamepad, byte8: u8) {
-    // ABXY Buttons
-    if byte8 & 0b10000000 != 0 {
-        gamepad.buttons.upper = true;
-    }
-    if byte8 & 0b01000000 != 0 {
-        gamepad.buttons.right = true;
-    }
-    if byte8 & 0b00100000 != 0 {
-        gamepad.buttons.lower = true;
-    }
-    if byte8 & 0b00010000 != 0 {
-        gamepad.buttons.left = true;
-    }
-
-    // dpad is counting up, top = 0, top right = 1, right = 2, right bottom = 3, bottom = 4, bottom left = 5, left = 6, left top = 7
-
-    match 0b00001111 & byte8 {
-        0 => gamepad.dpad.up = true,
-        1 => {
-            gamepad.dpad.up = true;
-            gamepad.dpad.right = true;
-        }
-        2 => gamepad.dpad.right = true,
-        3 => {
-            gamepad.dpad.right = true;
-            gamepad.dpad.down = true;
-        }
-        4 => gamepad.dpad.down = true,
-        5 => {
-            gamepad.dpad.left = true;
-            gamepad.dpad.down = true;
-        }
-        6 => gamepad.dpad.left = true,
-        7 => {
-            gamepad.dpad.left = true;
-            gamepad.dpad.up = true;
-        }
-        8 => (), // no dpad pressed
-        _ => (), // because of & OP, this is never the case
-    }
-}
-
-fn interpret_input(input_buf: [u8; HID_ARRAY_SIZE]) -> UniversalGamepad {
-    let mut gamepad: UniversalGamepad = UniversalGamepad {
-        sticks: Sticks {
-            left: Stick {
-                x: input_buf[1],
-                y: input_buf[2],
-                pressed: match input_buf[9] {
-                    64 => true,
-                    _ => false,
-                },
-            },
-            right: Stick {
-                x: input_buf[3],
-                y: input_buf[4],
-                pressed: match input_buf[9] {
-                    128 => true,
-                    _ => false,
-                },
-            },
-        },
-        triggers: Triggers {
-            left: input_buf[5],
-            right: input_buf[6],
-        },
-        bumpers: Bumpers {
-            left: match input_buf[9] {
-                1 => true,
-                _ => false,
-            },
-            right: match input_buf[9] {
-                2 => true,
-                _ => false,
-            },
-        },
-        buttons: MainButtons::allfalse(),
-        dpad: DPad::allfalse(),
-        specials: SpecialButtons {
-            touchpad: match input_buf[11] {
-                2 => true,
-                _ => false,
-            },
-            right: match input_buf[11] {
-                32 => true,
-                _ => false,
-            },
-            left: match input_buf[10] {
-                16 => true,
-                _ => false,
-            },
-            logo: match input_buf[11] {
-                1 => true,
-                _ => false,
-            },
-        },
-    };
-
-    eval_byte_8(&mut gamepad, input_buf[8]);
-    gamepad
-}
-
-pub fn terminal_output(benchm_average: Duration, gamepad: UniversalGamepad, show_all_keys: bool, show_benchmark: bool) {
-    let _ = Command::new("clear").status();
-
-    if show_benchmark {
-        println!("avg execution time: {:.0?}", benchm_average);
-    }
-
-    if show_all_keys {
-        println!("Lx: {:?}", gamepad.sticks.left.x);
-        println!("Ly: {:?}", gamepad.sticks.left.y);
-        println!("L : {:?}", gamepad.sticks.left.pressed);
-
-        println!("Rx: {:?}", gamepad.sticks.right.x);
-        println!("Ry: {:?}", gamepad.sticks.right.y);
-        println!("R : {:?}", gamepad.sticks.right.pressed);
-
-        println!("Tl: {:?}", gamepad.triggers.left);
-        println!("Tr: {:?}", gamepad.triggers.right);
-        println!("Bl: {:?}", gamepad.bumpers.left);
-        println!("Br: {:?}", gamepad.bumpers.right);
-
-        println!("X: {:?}", gamepad.buttons.lower);
-        println!("O: {:?}", gamepad.buttons.right);
-        println!("□: {:?}", gamepad.buttons.left);
-        println!("∆: {:?}", gamepad.buttons.upper);
-
-        println!("↑: {:?}", gamepad.dpad.up);
-        println!("→: {:?}", gamepad.dpad.right);
-        println!("↓: {:?}", gamepad.dpad.down);
-        println!("←: {:?}", gamepad.dpad.left);
-    }
-}
 
 // FIXME: The functions so far only work if connected via usb,
 // testing is needed to see how that can be generalized
@@ -185,7 +46,7 @@ pub fn read_ps5_usb(device: &HidDevice) {
         // first and 8. byte not needed
         // 13. and 14. byte are some sort of counter, either time or reads
 
-        let gamepad = interpret_input(input_buf);
+        // let gamepad = interpret_input(input_buf);
 
         // End Benchmark and Calc Average
         benchm_durations[benchm_index] = benchmark.elapsed();
@@ -193,7 +54,7 @@ pub fn read_ps5_usb(device: &HidDevice) {
         benchm_index = (benchm_index + 1) % BENCHMARK_SAMPLES;
 
         // Output if wanted
-        terminal_output(benchm_average, gamepad, true, true);
+        // terminal_output(benchm_average, gamepad, true, true);
 
         thread::sleep(Duration::from_micros(1500)); // <= 1500 is fine for now delay
     }

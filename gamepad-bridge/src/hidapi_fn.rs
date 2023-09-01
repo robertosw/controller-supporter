@@ -81,7 +81,6 @@ fn get_bluetooth_hid_devices(api: &HidApi) -> Result<Vec<&DeviceInfo>, ()> {
 
         match bus_type {
             BusType::Bluetooth => bluetooth_devices.push(device_info),
-            BusType::Usb => bluetooth_devices.push(device_info), // TODO REMOVE
             _ => continue,
         };
     }
@@ -96,10 +95,12 @@ fn get_bluetooth_hid_devices(api: &HidApi) -> Result<Vec<&DeviceInfo>, ()> {
 
 pub fn process_input(input: [u8; HID_ARRAY_SIZE], model: &GamepadModel, output: &mut UniversalGamepad) {
     match model {
-        GamepadModel::PS5 => process_input_ps5(output, input),
-        GamepadModel::PS4 => {}
+        GamepadModel::PS5 => process_input_ps5(input, output),
+        GamepadModel::PS4 => process_input_unknown(input),
     }
+}
 
+fn output_gamepad_btns(output: &mut UniversalGamepad) {
     println!("Lx: {:?}", output.sticks.left.x);
     println!("Ly: {:?}", output.sticks.left.y);
     println!("L : {:?}", output.sticks.left.pressed);
@@ -124,46 +125,59 @@ pub fn process_input(input: [u8; HID_ARRAY_SIZE], model: &GamepadModel, output: 
     println!("←: {:?}", output.dpad.left);
 }
 
-fn process_input_ps5(output: &mut UniversalGamepad, input: [u8; HID_ARRAY_SIZE]) {
-    let dpad = 0b00001111 & input[8];
+fn process_input_unknown(input: [u8; HID_ARRAY_SIZE]) {
+    print!("{}", termion::cursor::Goto(0, 0));
+
+    // adjust which bytes should be visible. For PS Gamepads the first two bytes are just counters
+    let mut i: usize = 0;
+
+    for byte in input[i..].iter() {
+        print!("{}|{:03}\t", i, byte);
+        i += 1;
+    }
+}
+
+fn process_input_ps5(input: [u8; HID_ARRAY_SIZE], output: &mut UniversalGamepad) {
+    let dpad = 0b00001111 & input[9];
 
     output.sticks = Sticks {
         left: Stick {
-            x: input[1],
-            y: input[2],
-            pressed: match input[9] {
+            x: input[2],
+            y: input[3],
+            pressed: match input[10] {
                 64 => true,
                 _ => false,
             },
         },
         right: Stick {
-            x: input[3],
-            y: input[4],
-            pressed: match input[9] {
+            x: input[4],
+            y: input[5],
+            pressed: match input[10] {
                 128 => true,
                 _ => false,
             },
         },
     };
     output.triggers = Triggers {
-        left: input[5],
-        right: input[6],
+        left: input[6],
+        right: input[7],
     };
     output.bumpers = Bumpers {
-        left: match input[9] {
+        left: match input[10] {
             1 => true,
             _ => false,
         },
-        right: match input[9] {
+        right: match input[10] {
             2 => true,
             _ => false,
         },
     };
+    // TODO check buttons and dpad
     output.buttons = MainButtons {
-        upper: (input[8] & 0b10000000 != 0),
-        right: (input[8] & 0b01000000 != 0),
-        lower: (input[8] & 0b00100000 != 0),
-        left: (input[8] & 0b00010000 != 0),
+        upper: (input[9] & 0b10000000 != 0),
+        right: (input[9] & 0b01000000 != 0),
+        lower: (input[9] & 0b00100000 != 0),
+        left: (input[9] & 0b00010000 != 0),
     };
     output.dpad = DPad {
         right: (dpad == 1 || dpad == 2 || dpad == 3),
@@ -176,7 +190,7 @@ fn process_input_ps5(output: &mut UniversalGamepad, input: [u8; HID_ARRAY_SIZE])
             2 => true,
             _ => false,
         },
-        right: match input[11] {
+        right: match input[10] {
             32 => true,
             _ => false,
         },
@@ -189,4 +203,21 @@ fn process_input_ps5(output: &mut UniversalGamepad, input: [u8; HID_ARRAY_SIZE])
             _ => false,
         },
     };
+
+    // maybe bytes 35 and 36 together are left-right
+
+    print!("{}", termion::cursor::Goto(0, 0));
+
+    let combined_u16: u16 = (input[35] as u16) << 8 | (input[36] as u16);
+
+    // adjust which bytes should be visible. For PS Gamepads the first two bytes are just counters
+    print!("{:05}\t", combined_u16);
+
+    // TODO Touchpad Support
+    // when Byte 34 changes, the touchpad state changed (either now touched or now not touched)
+    //  also this counts up each time the state changes
+    // Touchpad Y Axis is byte 37
+    // Touchpad X Axis is strange, (byte 35 or 36) probably consists of multiple bytes
+    //   if only touched, the value is somewhat correct (0 is left, 255 is right)
+    //   if you drag the finger across, this value overflows 4x on the whole way (l->r)
 }
