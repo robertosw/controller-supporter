@@ -20,6 +20,7 @@ use std::time::Duration;
 mod bluetooth_fn;
 mod helper_fn;
 mod hidapi_fn;
+mod hidapi_gamepads;
 mod hidapi_read_ps5_usb;
 mod hidapi_structs;
 mod usb_gadget;
@@ -35,8 +36,8 @@ fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program requires root privilages. Please set uuid accordingly.\n");
 
-    // TODO next steps: 
-    // 1. generalize the read_ps5_usb function to read from some device 
+    // TODO next steps:
+    // 1. generalize the read_ps5_usb function to read from some device
     //    and show the output formatted with each byte to 3 digits
     // 2. create struct which describes intepretation of input data per gamepad
 
@@ -48,17 +49,10 @@ fn main() {
         }
     };
 
-    let _gamepads: Vec<hidapi::DeviceInfo> = find_supported_gamepads(api);
-    for gamepad in _gamepads {
-        let api = match HidApi::new() {
-            Ok(api) => api,
-            Err(err) => {
-                println!("Error getting HidApi access: {:?}", err);
-                exit(2);
-            }
-        };
-        open_device(gamepad, api);
-    }
+    let (gamepad, model) = match get_hid_gamepad(&api) {
+        Ok((info, model)) => (info, model),
+        Err(_) => exit(1),
+    };
 
     // PS5_GAMEPAD.configure_device();
     // PS4_GAMEPAD.configure_device();
@@ -110,18 +104,6 @@ fn _bt_program_flow() {
     }
 
     thread_handle.join().unwrap();
-}
-
-fn _hidapi_starter() {
-    let api = match HidApi::new() {
-        Ok(api) => api,
-        Err(err) => {
-            println!("Error getting HidApi access: {:?}", err);
-            exit(2);
-        }
-    };
-
-    let _gamepads: Vec<hidapi::DeviceInfo> = find_supported_gamepads(api);
 }
 
 fn read_uinput() {

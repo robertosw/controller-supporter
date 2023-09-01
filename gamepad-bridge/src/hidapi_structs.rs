@@ -6,10 +6,50 @@ pub struct UniversalGamepad {
     pub buttons: MainButtons,
     pub specials: SpecialButtons,
 }
+impl UniversalGamepad {
+    pub fn nothing_pressed() -> Self {
+        Self {
+            sticks: Sticks {
+                left: Stick { x: 0, y: 0, pressed: false },
+                right: Stick { x: 0, y: 0, pressed: false },
+            },
+            triggers: Triggers { left: 0, right: 0 },
+            bumpers: Bumpers { left: false, right: false },
+            dpad: DPad {
+                up: false,
+                down: false,
+                left: false,
+                right: false,
+            },
+            buttons: MainButtons {
+                upper: false,
+                lower: false,
+                left: false,
+                right: false,
+            },
+            specials: SpecialButtons {
+                touchpad: false,
+                right: false,
+                left: false,
+                logo: false,
+            },
+        }
+    }
+}
+
 pub struct Sticks {
     pub left: Stick,
     pub right: Stick,
 }
+impl Sticks {
+    pub fn allfalse() -> Self {
+        Self {
+            left: Stick { x: 0, y: 0, pressed: false },
+            right: Stick { x: 0, y: 0, pressed: false },
+        }
+    }
+}
+
 pub struct Triggers {
     pub left: u8,
     pub right: u8,
@@ -20,10 +60,7 @@ pub struct Bumpers {
 }
 impl Bumpers {
     pub fn allfalse() -> Self {
-        Self {
-            left: false,
-            right: false,
-        }
+        Self { left: false, right: false }
     }
 }
 
