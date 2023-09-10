@@ -22,7 +22,7 @@ pub enum GamepadModel {
 /// - None of known vendor devices are known products
 /// - Opening a device failed
 pub fn get_hid_gamepad(api: &HidApi) -> Result<(HidDevice, GamepadModel), HidApiGamepadError> {
-    let bluetooth_devices: Vec<&DeviceInfo> = match get_bluetooth_hid_devices(api) {
+    let bluetooth_devices: Vec<&DeviceInfo> = match _get_bluetooth_hid_devices(api) {
         Ok(vec) => vec,
         Err(_) => return Err(HidApiGamepadError::NoBTDevice),
     };
@@ -62,7 +62,7 @@ pub fn get_hid_gamepad(api: &HidApi) -> Result<(HidDevice, GamepadModel), HidApi
 
 /// - If there are any hid devices connected via bluetooth, these will be returned.
 /// - If not, returns Error
-fn get_bluetooth_hid_devices(api: &HidApi) -> Result<Vec<&DeviceInfo>, ()> {
+fn _get_bluetooth_hid_devices(api: &HidApi) -> Result<Vec<&DeviceInfo>, ()> {
     // most likely only one gamepad will be connected at one time, so its fastest to assume an vec size of 1
     // Still, this function has to check all connected devices
     let mut bluetooth_devices: Vec<&DeviceInfo> = Vec::with_capacity(1);
@@ -93,17 +93,18 @@ fn get_bluetooth_hid_devices(api: &HidApi) -> Result<Vec<&DeviceInfo>, ()> {
     return Ok(bluetooth_devices);
 }
 
+/// Expects the input array to be output from hidapi
 pub fn process_input(input: [u8; HID_ARRAY_SIZE], model: &GamepadModel, output: &mut UniversalGamepad) {
     match model {
         GamepadModel::PS5 => {
-            process_input_ps5(input, output);
-            output_gamepad_btns(output);
+            _process_input_ps5(input, output);
+            _output_gamepad_btns(output);
         }
-        GamepadModel::PS4 => process_input_unknown(input),
+        GamepadModel::PS4 => _process_input_unknown(input),
     }
 }
 
-fn output_gamepad_btns(output: &mut UniversalGamepad) {
+fn _output_gamepad_btns(output: &mut UniversalGamepad) {
     print!("{}", termion::clear::All);
     println!("Lx: {:?}", output.sticks.left.x);
     println!("Ly: {:?}", output.sticks.left.y);
@@ -127,9 +128,14 @@ fn output_gamepad_btns(output: &mut UniversalGamepad) {
     println!("→: {:?}", output.dpad.right);
     println!("↓: {:?}", output.dpad.down);
     println!("←: {:?}", output.dpad.left);
+
+    println!("Special R: {:?}", output.specials.right);
+    println!("Special L: {:?}", output.specials.left);
+    println!("Logo: {:?}", output.specials.logo);
+    println!("Touchpad: {:?}", output.specials.touchpad);
 }
 
-fn process_input_unknown(input: [u8; HID_ARRAY_SIZE]) {
+fn _process_input_unknown(input: [u8; HID_ARRAY_SIZE]) {
     print!("{}", termion::cursor::Goto(1, 1));
 
     // adjust which bytes should be visible. For PS Gamepads the first two bytes are just counters
@@ -141,7 +147,7 @@ fn process_input_unknown(input: [u8; HID_ARRAY_SIZE]) {
     }
 }
 
-fn process_input_ps5(input: [u8; HID_ARRAY_SIZE], output: &mut UniversalGamepad) {
+fn _process_input_ps5(input: [u8; HID_ARRAY_SIZE], output: &mut UniversalGamepad) {
     let dpad = 0b00001111 & input[9];
 
     output.sticks = Sticks {
@@ -176,7 +182,6 @@ fn process_input_ps5(input: [u8; HID_ARRAY_SIZE], output: &mut UniversalGamepad)
             _ => false,
         },
     };
-    // TODO check buttons and dpad
     output.buttons = MainButtons {
         upper: (input[9] & 0b10000000 != 0),
         right: (input[9] & 0b01000000 != 0),

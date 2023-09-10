@@ -37,12 +37,11 @@ use crate::hidapi_gamepad::UniversalGamepad;
 //  if working on native os as non root: (from /gamepad-bridge)
 //  - build & run   `cargo build --release && sudo chown root:root target/release/gamepad-bridge && sudo chmod +s target/release/gamepad-bridge && /target/release/gamepad-bridge`
 
-
 pub const HID_ARRAY_SIZE: usize = 75;
 
 fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
-    println!("This program requires root privilages. Please set uuid accordingly.\n");
+    println!("This program needs to be run as root user. Please set uuid accordingly.\n");
 
     // PS5_GAMEPAD.configure_device();
     // PS4_GAMEPAD.configure_device();
