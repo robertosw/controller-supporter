@@ -10,4 +10,5 @@ RUN apt install -y libudev-dev
 RUN apt install -y libdbus-1-dev
 RUN apt install -y libsystemd-dev
 
-WORKDIR /root/gamepad-bridge/
+# Rust formatter
+RUN rustup component add rustfmt

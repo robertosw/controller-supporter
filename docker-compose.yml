@@ -1,13 +1,23 @@
+# After changes to this file oder Dockerfile, run with docker compose --build
+# to tell docker that something has changed (this does not re-download the image, if not changed)
+
 services:
   # names are arbitrary
   rust: 
+    container_name: gamepad-bridge
     # build defines the folder where to search for the Dockerfile
     build: .
-
+    
     # /root/ is the default folder that VSCode attaches to
     volumes:
       - ./:/root/gamepad-bridge
     
-    # tail waits for this file to appear (never happens) so the container keeps running
-    # VSCode can only attach to running containers
-    command: tail -f /dev/null
+    # Allow read and write access to ALL system files (/dev/hidrawX)
+    # privileged: true
+
+    # Better solution: Only allow access to the one device that is needed
+    devices:
+      - /dev/hidraw4:/dev/hidraw4
+  
+    # keep the container running forever
+    command: sh -c 'while true; do sleep 3600; done'
