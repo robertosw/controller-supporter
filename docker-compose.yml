@@ -1,0 +1,32 @@
+# After changes to this file oder Dockerfile, run with docker compose --build
+# to tell docker that something has changed (this does not re-download the image, if not changed)
+
+services:
+  develop: 
+    container_name: gamepad-bridge
+
+    build:
+      context: .
+      dockerfile: Dockerfile-amd64
+    
+    volumes:
+      - ./:/root/gamepad-bridge
+    
+    # devices:
+    #   - /dev/hidraw4:/dev/hidraw4
+  
+    # keep the container running forever
+    command: sh -c 'while true; do sleep 3600; done'
+
+  aarch64-build:
+    container_name: gamepad-bridge-aarch64
+    platform: linux/arm64
+    
+    build:
+      context: .
+      dockerfile: Dockerfile-aarch64
+    
+    volumes:
+      - ./Cargo.toml:/root/gamepad-bridge/Cargo.toml:ro
+      - ./src:/root/gamepad-bridge/src:ro
+      - ./aarch64/target:/root/gamepad-bridge/target
