@@ -1,0 +1,13 @@
+services:
+  # names are arbitrary
+  rust: 
+    # build defines the folder where to search for the Dockerfile
+    build: .
+
+    # /root/ is the default folder that VSCode attaches to
+    volumes:
+      - ./:/root/gamepad-bridge
+    
+    # tail waits for this file to appear (never happens) so the container keeps running
+    # VSCode can only attach to running containers
+    command: tail -f /dev/null
