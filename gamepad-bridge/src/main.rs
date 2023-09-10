@@ -31,8 +31,12 @@ use crate::bluetooth_fn::*;
 use crate::hidapi_fn::{get_hid_gamepad, process_input};
 use crate::hidapi_gamepad::UniversalGamepad;
 
-// build, then run as root to allow hidraw read
-// clear && cargo build --release && sudo chown root:root target/release/gamepad-bridge && sudo chmod +s target/release/gamepad-bridge && target/release/gamepad-bridge
+//  if working inside a docker container: (started with the docker-compose from project root)
+//  - build and run (inside container)  `cargo run`
+//
+//  if working on native os as non root: (from /gamepad-bridge)
+//  - build & run   `cargo build --release && sudo chown root:root target/release/gamepad-bridge && sudo chmod +s target/release/gamepad-bridge && /target/release/gamepad-bridge`
+
 
 pub const HID_ARRAY_SIZE: usize = 75;
 
@@ -44,11 +48,6 @@ fn main() {
     // PS4_GAMEPAD.configure_device();
     // GENERIC_KEYBOARD.configure_device();
 
-    // TODO next steps:
-    // 1. generalize the read_ps5_usb function to read from some device
-    //    and show the output formatted with each byte to 3 digits
-    // 2. create struct which describes intepretation of input data per gamepad
-
     let api = match HidApi::new() {
         Ok(api) => api,
         Err(err) => {
@@ -58,9 +57,11 @@ fn main() {
     };
 
     let (device, model) = match get_hid_gamepad(&api) {
-        Ok((info, model)) => (info, model),
+        Ok(val) => val,
         Err(_) => exit(1),
     };
+
+    // --- Read from device --- //
 
     // if false, calls to read may return nothing, but also dont block
     match device.set_blocking_mode(false) {

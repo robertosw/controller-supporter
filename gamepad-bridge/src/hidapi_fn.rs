@@ -95,12 +95,16 @@ fn get_bluetooth_hid_devices(api: &HidApi) -> Result<Vec<&DeviceInfo>, ()> {
 
 pub fn process_input(input: [u8; HID_ARRAY_SIZE], model: &GamepadModel, output: &mut UniversalGamepad) {
     match model {
-        GamepadModel::PS5 => process_input_ps5(input, output),
+        GamepadModel::PS5 => {
+            process_input_ps5(input, output);
+            output_gamepad_btns(output);
+        }
         GamepadModel::PS4 => process_input_unknown(input),
     }
 }
 
 fn output_gamepad_btns(output: &mut UniversalGamepad) {
+    print!("{}", termion::clear::All);
     println!("Lx: {:?}", output.sticks.left.x);
     println!("Ly: {:?}", output.sticks.left.y);
     println!("L : {:?}", output.sticks.left.pressed);
@@ -126,7 +130,7 @@ fn output_gamepad_btns(output: &mut UniversalGamepad) {
 }
 
 fn process_input_unknown(input: [u8; HID_ARRAY_SIZE]) {
-    print!("{}", termion::cursor::Goto(0, 0));
+    print!("{}", termion::cursor::Goto(1, 1));
 
     // adjust which bytes should be visible. For PS Gamepads the first two bytes are just counters
     let mut i: usize = 0;
@@ -206,12 +210,12 @@ fn process_input_ps5(input: [u8; HID_ARRAY_SIZE], output: &mut UniversalGamepad)
 
     // maybe bytes 35 and 36 together are left-right
 
-    print!("{}", termion::cursor::Goto(0, 0));
+    // print!("{}", termion::cursor::Goto(1, 1));
 
-    let combined_u16: u16 = (input[35] as u16) << 8 | (input[36] as u16);
+    // let combined_u16: u16 = (input[35] as u16) << 8 | (input[36] as u16);
 
     // adjust which bytes should be visible. For PS Gamepads the first two bytes are just counters
-    print!("{:05}\t", combined_u16);
+    // print!("{:05}\t", combined_u16);
 
     // TODO Touchpad Support
     // when Byte 34 changes, the touchpad state changed (either now touched or now not touched)
