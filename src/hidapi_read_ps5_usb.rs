@@ -24,7 +24,7 @@ pub fn read_ps5_usb(device: &HidDevice) {
     const BENCHMARK_SAMPLES: usize = 1000;
     let mut benchm_durations: [Duration; BENCHMARK_SAMPLES] = [Duration::from_secs(0); BENCHMARK_SAMPLES];
     let mut benchm_index: usize = 0;
-    let mut benchm_average: Duration;
+    let mut _benchm_average: Duration;
 
     loop {
         let benchmark = Instant::now();
@@ -50,7 +50,7 @@ pub fn read_ps5_usb(device: &HidDevice) {
 
         // End Benchmark and Calc Average
         benchm_durations[benchm_index] = benchmark.elapsed();
-        benchm_average = benchm_durations.iter().sum::<Duration>() / benchm_durations.len() as u32;
+        _benchm_average = benchm_durations.iter().sum::<Duration>() / benchm_durations.len() as u32;
         benchm_index = (benchm_index + 1) % BENCHMARK_SAMPLES;
 
         // Output if wanted

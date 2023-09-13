@@ -12,8 +12,8 @@ services:
     volumes:
       - ./:/root/gamepad-bridge
     
-    devices:
-      - /dev/hidraw4:/dev/hidraw4
+    # devices:
+    #   - /dev/hidraw4:/dev/hidraw4
   
     # keep the container running forever
     command: sh -c 'while true; do sleep 3600; done'

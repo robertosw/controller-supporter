@@ -41,7 +41,7 @@ dependencies = [
 
 [[package]]
 name = "gamepad-bridge"
-version = "0.5.1-13"
+version = "0.5.1-36"
 dependencies = [
  "ctrlc",
  "hidapi",

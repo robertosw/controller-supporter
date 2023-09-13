@@ -2,6 +2,7 @@
 - `/sys/bus/hid/devices/` hid devices here probably have the same folder structure as is needed for by the gadget driver
 - [HID Report Descriptors Syntax Intro](https://www.kernel.org/doc/html/next/hid/hidintro.html)
 - `lspci -v|grep HCI` find out which type of **Host Controller Driver** you have on your hardware
+- `hid-recorder` from the `hid-tools` package does alot of this in one step
 
 <br>
 

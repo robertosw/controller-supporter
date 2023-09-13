@@ -1,6 +1,7 @@
 ### Allow docker to run images with a different target platform than the host
 - `docker run --rm --privileged multiarch/qemu-user-static --reset -p yes`
 - This links all platforms supported by qemu correctly for docker
+- This might have to be run after every host system reboot
 
 ### Usage
 All commands run in project root

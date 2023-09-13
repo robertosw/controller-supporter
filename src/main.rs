@@ -1,4 +1,4 @@
-#![allow(dead_code, unreachable_code)]
+#![allow(dead_code, unreachable_code, unused_imports)]
 
 #[macro_use]
 extern crate version;
@@ -7,12 +7,12 @@ extern crate version;
 extern crate termion;
 
 use ctrlc::set_handler;
+use helper_fn::print_and_exit;
 use hidapi::HidApi;
 use std::env;
 use std::fs::File;
-use std::io::Read;
+use std::io::Write;
 use std::process::exit;
-use std::process::Command;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -30,6 +30,8 @@ mod usb_gamepads;
 use crate::bluetooth_fn::*;
 use crate::hidapi_fn::{get_hid_gamepad, process_input};
 use crate::hidapi_gamepad::UniversalGamepad;
+use crate::usb_gamepads::PS4_GAMEPAD;
+use crate::usb_gamepads::PS5_GAMEPAD;
 
 //  if working inside a docker container: (started with the docker-compose from project root)
 //  - build and run (inside container)  `cargo run`
@@ -43,10 +45,66 @@ fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");
 
-    // PS5_GAMEPAD.configure_device();
+    PS5_GAMEPAD.configure_device();
     // PS4_GAMEPAD.configure_device();
+    // _generate_output();
+
+    exit(0);
     // GENERIC_KEYBOARD.configure_device();
 
+    _read_gamepad_input();
+}
+
+fn _generate_output() {
+    let mut hidg0 = match File::options()
+        .write(true)
+        .truncate(false)
+        .open("/dev/hidg0")
+    {
+        Ok(file) => file,
+        Err(_) => print_and_exit("Could not open file bmAttributes", 13),
+    };
+
+    // This counts one byte at a time from 0 to 255 and back to 0
+
+    const REPORT_LENGTH: usize = 64;
+    const DURATION_MS: u64 = 4000;
+    let mut output_buf: [u8; REPORT_LENGTH] = [0; REPORT_LENGTH];
+
+    let mut i: usize = 0;
+    while i < REPORT_LENGTH {
+        let mut up: bool = true;
+        while (output_buf[i] < 255) && up {
+            output_buf[i] += 1;
+            println!("{:?}", output_buf);
+            match hidg0.write_all(&output_buf) {
+                Ok(_) => (),
+                Err(err) => {
+                    println!("write to hidg0 failed: {:?}", err);
+                    exit(1);
+                },
+            }
+            thread::sleep(Duration::from_millis((DURATION_MS / 2) / 255));
+        }
+        up = false;
+        while (output_buf[i] > 0) && !up {
+            println!("{:?}", output_buf);
+            output_buf[i] -= 1;
+            match hidg0.write_all(&output_buf) {
+                Ok(_) => (),
+                Err(err) => {
+                    println!("write to hidg0 failed: {:?}", err);
+                    exit(1);
+                },
+            }
+            thread::sleep(Duration::from_millis((DURATION_MS / 2) / 255));
+        }
+
+        i += 1;
+    }
+}
+
+fn _read_gamepad_input() -> ! {
     let api = match HidApi::new() {
         Ok(api) => api,
         Err(err) => {
@@ -135,47 +193,4 @@ fn _bt_program_flow() {
     }
 
     thread_handle.join().unwrap();
-}
-
-fn read_uinput() {
-    // The main problem is that the same device has a different report descriptor over bt and usb
-    // so knowing the report descriptor from usb is quite useless for understanding the raw bt input
-
-    /* Find out which device is which hidraw:
-    loop over all hidraw devices and read this file:
-
-    cat /sys/class/hidraw/hidrawX/device/uevent
-        DRIVER=sony
-        HID_ID=0005:0000054C:000009CC
-        HID_NAME=Wireless Controller
-        ...
-
-    But in the end, hidapi also reads from hidrawX so why implement this again?
-    */
-
-    // let mut buf: [u8; 100] = [0; 100];
-
-    let mut file = match File::options().read(true).open("/dev/hidraw3") {
-        Ok(file) => file,
-        Err(err) => {
-            println!("could not open: {:?}", err);
-            exit(1);
-        }
-    };
-
-    loop {
-        let mut buf: Vec<u8> = Vec::new();
-        match file.read_to_end(&mut buf) {
-            // Ok(i) => println!("read {i} bytes"),
-            Ok(_) => (),
-            Err(err) => println!("Read failed: {:?}", err),
-        };
-        let _ = Command::new("clear").status();
-
-        for byte in buf {
-            print!("{:03} ", byte);
-        }
-        println!();
-        thread::sleep(Duration::from_millis(3));
-    }
 }

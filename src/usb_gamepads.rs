@@ -22,7 +22,7 @@ pub const PS5_GAMEPAD: UsbGadgetDescriptor = UsbGadgetDescriptor {
     functions_hid: UsbGadgetFunctionsHid {
         hid_subclass: 0,
         protocol: 0,
-        report_length: 64, // TODO Reading from this device gives 48 bytes, maybe this is wanted here?
+        report_length: 64,
         report_descriptor: &[
             0x05, 0x01, // Usage Page (Generic Desktop Ctrls)
             0x09, 0x05, // Usage (Game Pad)
