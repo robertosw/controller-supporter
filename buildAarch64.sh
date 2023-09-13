@@ -11,13 +11,13 @@
 # docker builder prune
 
 clear
-echo "creating local folders"
+echo ">> creating local folders"
 echo
 mkdir ./aarch64/
 mkdir ./aarch64/target
 
 echo
-echo "building image for linux/arm64"
+echo ">> building image for linux/arm64"
 echo
 
 # Increment the version in Cargo.toml to ensure that docker doesnt cache the source code
@@ -43,12 +43,45 @@ echo
 
 docker compose up --build aarch64-build
 
-# delete all containers created by docker-compose
-docker compose down
-
 # copy finished build to folder that is tracked by git
 cp ./aarch64/target/release/gamepad-bridge ./aarch64/gamepad-bridge
 
 echo
-echo "project compiled"
+echo ">> project compiled"
 echo
+
+if [ $# -eq 0 ]; then
+    echo "To automatically copy the built binary over ssh, specify a hostname or ip and password like this: (both optional)"
+    echo " $0 hostname password"
+    echo " $0 x.x.x.x password"
+    exit 0
+fi
+if [ $# -eq 1 ]; then
+    echo "NOTE: You can specify a password to speed things up: (optional)"
+    echo " $0 hostname password"
+    echo " $0 x.x.x.x password"
+    echo
+
+    rpi_host="$1"
+    echo ">> copying binary to destination"
+    scp "./aarch64/gamepad-bridge" "$rpi_host:~/gamepad-bridge1"
+    echo
+    echo ">> overwride old binary at destination"
+    ssh $rpi_host "sudo mv ~/gamepad-bridge1 ~/gamepad-bridge"
+    echo
+    echo ">> set uuid bit and owner of new binary to root"
+    ssh $rpi_host "sudo chown root:root ~/gamepad-bridge"
+    ssh $rpi_host "sudo chmod +s ~/gamepad-bridge"
+    echo
+    echo ">> success"
+else
+    rpi_host="$1"
+    password="$2"
+    sshpass -p "$password" scp "./aarch64/gamepad-bridge" "$rpi_host:~/gamepad-bridge1"
+    echo ">> copied binary to destination"
+    sshpass -p "$password" ssh $rpi_host "sudo mv ~/gamepad-bridge1 ~/gamepad-bridge"
+    echo ">> overwritten old binary at destination"
+    sshpass -p "$password" ssh $rpi_host "sudo chown root:root ~/gamepad-bridge"
+    sshpass -p "$password" ssh $rpi_host "sudo chmod +s ~/gamepad-bridge"
+    echo ">> owner of new binary set to root and uuid bit set"
+fi
