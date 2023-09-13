@@ -237,35 +237,39 @@ pub struct UsbGadgetStrings<'a> {
 }
 
 impl UsbGadgetStrings<'_> {
-    // TODO if empty, dont write
-
     /// Writes the contents of each string into the corresponding file, if the string is not empty
     ///
     /// **Exits** as soon as one write operation is not successful
     fn write_to_disk(&self) {
-        match File::create(&(ENG_STR_DIR.to_string() + "/manufacturer")) {
-            Ok(mut file) => match file.write_all(&self.manufacturer.as_bytes()) {
-                Ok(_) => (),
-                Err(_) => print_and_exit("Could not write to file manufacturer", 14),
-            },
-            Err(_) => print_and_exit("Could not open file manufacturer", 15),
-        };
+        if self.manufacturer.is_empty() == false {
+            match File::create(&(ENG_STR_DIR.to_string() + "/manufacturer")) {
+                Ok(mut file) => match file.write_all(&self.manufacturer.as_bytes()) {
+                    Ok(_) => (),
+                    Err(_) => print_and_exit("Could not write to file manufacturer", 14),
+                },
+                Err(_) => print_and_exit("Could not open file manufacturer", 15),
+            };
+        }
 
-        match File::create(&(ENG_STR_DIR.to_string() + "/product")) {
-            Ok(mut file) => match file.write_all(&self.product.as_bytes()) {
-                Ok(_) => (),
-                Err(_) => print_and_exit("Could not write to file product", 14),
-            },
-            Err(_) => print_and_exit("Could not open file product", 15),
-        };
+        if self.product.is_empty() == false {
+            match File::create(&(ENG_STR_DIR.to_string() + "/product")) {
+                Ok(mut file) => match file.write_all(&self.product.as_bytes()) {
+                    Ok(_) => (),
+                    Err(_) => print_and_exit("Could not write to file product", 14),
+                },
+                Err(_) => print_and_exit("Could not open file product", 15),
+            };
+        }
 
-        match File::create(&(ENG_STR_DIR.to_string() + "/serialnumber")) {
-            Ok(mut file) => match file.write_all(&self.serialnumber.as_bytes()) {
-                Ok(_) => (),
-                Err(_) => print_and_exit("Could not write to file serialnumber", 14),
-            },
-            Err(_) => print_and_exit("Could not open file serialnumber", 15),
-        };
+        if self.serialnumber.is_empty() == false {
+            match File::create(&(ENG_STR_DIR.to_string() + "/serialnumber")) {
+                Ok(mut file) => match file.write_all(&self.serialnumber.as_bytes()) {
+                    Ok(_) => (),
+                    Err(_) => print_and_exit("Could not write to file serialnumber", 14),
+                },
+                Err(_) => print_and_exit("Could not open file serialnumber", 15),
+            };
+        }
     }
 }
 
@@ -382,7 +386,6 @@ impl UsbGadgetFunctionsHid {
         }
     }
 }
-
 
 /* All of this as a shell script faster testing:
 
