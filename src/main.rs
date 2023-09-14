@@ -1,4 +1,4 @@
-#![allow(dead_code, unreachable_code, unused_imports)]
+#![allow(dead_code, unreachable_code)]
 
 #[macro_use]
 extern crate version;
@@ -7,35 +7,31 @@ extern crate version;
 extern crate termion;
 
 use ctrlc::set_handler;
-use helper_fn::print_and_exit;
 use hidapi::HidApi;
-use rand::Rng;
 use std::env;
 use std::fs::File;
 use std::io::Write;
-use std::os::unix::prelude::OpenOptionsExt;
 use std::process::exit;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
+use usb_gadget::UsbGadgetDescriptor;
 
 mod bluetooth_fn;
 mod helper_fn;
 mod hidapi_fn;
-mod hidapi_gamepad;
-mod hidapi_read_ps5_usb;
+mod universal_gamepad;
 mod usb_gadget;
-mod usb_gamepads;
+mod usb_gamepad_keyboard;
+mod usb_gamepad_ps4;
+mod usb_gamepad_ps5;
 
 use crate::bluetooth_fn::*;
-use crate::hidapi_fn::GamepadModel;
 use crate::hidapi_fn::{get_hid_gamepad, process_input};
-use crate::hidapi_gamepad::UniversalGamepad;
-use crate::usb_gamepads::GENERIC_KEYBOARD;
-use crate::usb_gamepads::PS4_GAMEPAD;
-use crate::usb_gamepads::PS5_GAMEPAD;
+use crate::universal_gamepad::UniversalGamepad;
+use crate::usb_gamepad_ps5::DUALSENSE;
 
 //  if working inside a docker container: (started with the docker-compose from project root)
 //  - build and run (inside container)  `cargo run`
@@ -52,8 +48,7 @@ fn main() {
     // GENERIC_KEYBOARD.configure_device();
     // _generate_output_keyboard();
 
-    PS5_GAMEPAD.configure_device();
-    _generate_output_ps5();
+    DUALSENSE.configure_device();
 
     // PS4_GAMEPAD.configure_device();
 
@@ -101,140 +96,6 @@ fn _generate_output_keyboard() {
         }
 
         thread::sleep(Duration::from_millis(150));
-    }
-}
-
-fn _generate_output_ps5() {
-    const O_NONBLOCK: i32 = 2048;
-
-    // Currently simulating PS5 Dual Sense
-
-    const REPORT_LENGTH: usize = PS5_GAMEPAD.b_max_packet_size0 as usize; // see usb_gamepads.rs or Gamepad Info Collection.md
-    const DURATION_MS: u64 = 4000;
-
-    let mut dummy: UniversalGamepad = UniversalGamepad::nothing_pressed();
-    let mut counter: u8 = 0;
-    let mut seconds: u8 = 0;
-
-    let mut oscillate = 0;
-    let mut up: bool = true;
-
-    println!("sleeping 10s");
-    thread::sleep(Duration::from_secs(10));
-    println!("lets go");
-
-    loop {
-        let mut hidg0 = match File::options().write(true).append(false).open("/dev/hidg0") {
-            Ok(file) => file,
-            Err(_) => print_and_exit("Could not open file hidg0", 13),
-        };
-
-        counter += 1;
-
-        if counter == 255 {
-            // This is roughly a second for 4ms interval
-            // 4ms * 250 would be 1s, but maybe the real value also isnt a second, but counts the overflows?
-            seconds += 1
-        }
-
-        let mut rng = rand::thread_rng();
-        let logo_touchpad_byte: u8 = rng.gen_range(0..=2);
-
-        // This counts one byte at a time from 0 to 255 and back to 0
-
-        if oscillate == 255 {
-            up = false;
-        }
-        while (oscillate < 255) && up {
-            oscillate += 1;
-        }
-        while (oscillate > 0) && !up {
-            oscillate -= 1;
-        }
-
-        dummy.sticks.left.x = oscillate;
-        dummy.sticks.left.y = oscillate;
-        dummy.sticks.right.x = oscillate;
-        dummy.sticks.right.y = oscillate;
-        dummy.triggers.left = oscillate;
-        dummy.triggers.right = oscillate;
-
-        let out: [u8; REPORT_LENGTH] = [
-            0x01,
-            dummy.sticks.left.x,
-            dummy.sticks.left.y,
-            dummy.sticks.right.x,
-            dummy.sticks.right.y,
-            dummy.triggers.left,
-            dummy.triggers.right,
-            counter,
-            oscillate, // Buttons and DPad
-            oscillate, // Special Buttons, Bumpers, Triggers and Sticks (only WHAT is pressed, for triggers not value)
-            0,         // Logo / Touchpad
-            0,         // always 0
-            counter,   //
-            seconds,   //
-            0xee,      // might be charging state (in %) (unlikely, changes drastically after reconnect)
-            0xad,      // ??
-            0x00,      // gyroskop here (seems to be relative, not absolute)
-            0x00,      // gyroskop here (seems to be relative, not absolute)
-            0xff,      // gyroskop here (seems to be relative, not absolute)
-            0xff,      // gyroskop here (seems to be relative, not absolute)
-            0x02,      // gyroskop here (seems to be relative, not absolute)
-            0x00,      // gyroskop here (seems to be relative, not absolute)
-            0x06,      // gyroskop here (seems to be relative, not absolute)
-            0x00,      // gyroskop here (seems to be relative, not absolute)
-            0x81,      // gyroskop here (seems to be relative, not absolute)
-            0x1f,      // gyroskop here (seems to be relative, not absolute)
-            0x07,      // gyroskop here (seems to be relative, not absolute)
-            0x06,      // gyroskop here (seems to be relative, not absolute)
-            0x46,      // gyroskop here (seems to be relative, not absolute)
-            0x66,      // gyroskop here (seems to be relative, not absolute)
-            counter,   // this is a really slow counter (goes up every ~10s)
-            0x00,      // ??
-            0x14,      // ??
-            0x80,      // ??
-            0x00,      // ??
-            0x00,      // ??
-            0x00,      // ??
-            0x80,      // ??
-            0x00,      // ??
-            0x00,      // ??
-            0x00,      // ??
-            0x00,      // ??
-            0x09,      // ??
-            0x09,      // ??
-            0x00,      // ??
-            0x00,      // ??
-            0x00,      // ??
-            0x00,      // ??
-            0x00,      // ??
-            0xe3,      // random?
-            0x79,      // random?
-            0xab,      // random?
-            0x00,      // slow counter
-            0x17,      // constant?
-            0x08,      // constant?
-            0x00,      // constant?
-            0x5b,      // random?
-            0x7f,      // random?
-            0xef,      // random?
-            0x9c,      // random?
-            0xac,      // random?
-            0x03,      // random?
-            0x92,      // random?
-            0x30,      // random?
-        ];
-
-        match hidg0.write_all(&out) {
-            Ok(_) => (),
-            Err(err) => {
-                println!("write to hidg0 failed: {:?}", err);
-            }
-        }
-
-        // TODO achieve a real timed interval
-        thread::sleep(Duration::from_millis(4));
     }
 }
 

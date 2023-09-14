@@ -1,7 +1,7 @@
 use ::hidapi::{BusType, HidApi};
 use hidapi::{DeviceInfo, HidDevice};
 
-use crate::{hidapi_gamepad::*, HID_ARRAY_SIZE};
+use crate::{universal_gamepad::*, HID_ARRAY_SIZE};
 
 pub enum HidApiGamepadError {
     NoBTDevice,

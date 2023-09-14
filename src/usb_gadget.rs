@@ -16,7 +16,7 @@ use std::{
     process::exit,
 };
 
-use crate::helper_fn::{print_and_exit, run_cmd};
+use crate::{helper_fn::{print_and_exit, run_cmd}, universal_gamepad::UniversalGamepad};
 
 const DEVICE_DIR: &str = "/sys/kernel/config/usb_gadget/raspi";
 const ENG_STR_DIR: &str = "/sys/kernel/config/usb_gadget/raspi/strings/0x409";
@@ -35,6 +35,7 @@ pub struct UsbGadgetDescriptor<'a> {
     pub strings_0x409: UsbGadgetStrings<'a>,
     pub configs_c1: UsbGadgetConfigs<'a>,
     pub functions_hid: UsbGadgetFunctionsHid,
+    pub write_output_once: fn(&UniversalGamepad),
 }
 
 impl UsbGadgetDescriptor<'_> {
