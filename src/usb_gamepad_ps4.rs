@@ -1,6 +1,6 @@
 use crate::{universal_gamepad::UniversalGamepad, usb_gadget::*};
 
-pub const PS4_GAMEPAD: UsbGadgetDescriptor = UsbGadgetDescriptor {
+pub const DUALSHOCK: UsbGadgetDescriptor = UsbGadgetDescriptor {
     bcd_usb: 0x200,
     b_device_class: 0,
     b_device_sub_class: 0,

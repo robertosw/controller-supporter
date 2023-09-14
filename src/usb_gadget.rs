@@ -16,7 +16,10 @@ use std::{
     process::exit,
 };
 
-use crate::{helper_fn::{print_and_exit, run_cmd}, universal_gamepad::UniversalGamepad};
+use crate::{
+    helper_fn::{print_and_exit, run_cmd},
+    universal_gamepad::UniversalGamepad,
+};
 
 const DEVICE_DIR: &str = "/sys/kernel/config/usb_gadget/raspi";
 const ENG_STR_DIR: &str = "/sys/kernel/config/usb_gadget/raspi/strings/0x409";
@@ -39,17 +42,22 @@ pub struct UsbGadgetDescriptor<'a> {
 }
 
 impl UsbGadgetDescriptor<'_> {
+    /// Calls the function pointer `write_output_once` (was provided at instantiation)
+    pub fn write_output_once(&self, input: &UniversalGamepad) {
+        (self.write_output_once)(input);
+    }
+
     /// Using linux' ConfigFS, create the given usb device
     pub fn configure_device(&self) {
-        self.create_directories();
+        self._create_directories();
 
-        self.write_to_disk();
+        self._write_to_disk();
         self.configs_c1.write_to_disk();
         self.strings_0x409.write_to_disk();
         self.functions_hid.write_to_disk();
 
-        self.assign_fn_to_config();
-        match self.bind_to_udc() {
+        self._assign_fn_to_config();
+        match self._bind_to_udc() {
             Ok(_) => (),
             Err(err) => {
                 println!("Failed to bind gadget to udc: {:?}", err);
@@ -75,7 +83,7 @@ impl UsbGadgetDescriptor<'_> {
     // }
 
     /// will exit if any operation is not successful
-    fn create_directories(&self) {
+    fn _create_directories(&self) {
         match run_cmd("/sys/kernel/config/usb_gadget", "mkdir raspi") {
             Ok(_) => (),
             Err(_) => print_and_exit("Could not create directory /sys/kernel/config/usb_gadget/raspi", 9),
@@ -122,7 +130,7 @@ impl UsbGadgetDescriptor<'_> {
     /// `bLength`, `bDescriptorType`, `iManufacturer`, `iProduct`, `iSerialNumber`, `bNumConfigurations`
     ///
     /// This implies that some of the work is done by the driver.
-    fn write_to_disk(&self) {
+    fn _write_to_disk(&self) {
         match File::options().write(true).truncate(true).open(&(DEVICE_DIR.to_string() + "/bcdDevice")) {
             Ok(mut file) => match file.write_all(&self.bcd_device.to_string().as_bytes()) {
                 Ok(_) => (),
@@ -188,14 +196,14 @@ impl UsbGadgetDescriptor<'_> {
         };
     }
 
-    fn assign_fn_to_config(&self) {
+    fn _assign_fn_to_config(&self) {
         match run_cmd(DEVICE_DIR, "ln -s functions/hid.usb0/ configs/c.1/") {
             Ok(_) => (),
             Err(_) => print_and_exit("Could not link functions (functions/hid.usb0/) to configs (configs/c.1/)", 14),
         }
     }
 
-    fn bind_to_udc(&self) -> Result<(), &str> {
+    fn _bind_to_udc(&self) -> Result<(), &str> {
         let paths = match fs::read_dir("/sys/class/udc") {
             Ok(paths) => paths,
             Err(err) => print_and_exit(format!("Error while reading directory /sys/class/udc: {:?}", err).as_str(), 20),

@@ -31,6 +31,7 @@ mod usb_gamepad_ps5;
 use crate::bluetooth_fn::*;
 use crate::hidapi_fn::{get_hid_gamepad, process_input};
 use crate::universal_gamepad::UniversalGamepad;
+use crate::usb_gamepad_ps4::DUALSHOCK;
 use crate::usb_gamepad_ps5::DUALSENSE;
 
 //  if working inside a docker container: (started with the docker-compose from project root)
@@ -41,16 +42,20 @@ use crate::usb_gamepad_ps5::DUALSENSE;
 
 pub const HID_ARRAY_SIZE: usize = 75;
 
+struct Test {}
+
+impl Test {}
+
 fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");
 
-    // GENERIC_KEYBOARD.configure_device();
-    // _generate_output_keyboard();
+    DUALSHOCK.configure_device();
+    DUALSHOCK.write_output_once(&UniversalGamepad::nothing_pressed());
 
     DUALSENSE.configure_device();
+    DUALSENSE.write_output_once(&UniversalGamepad::nothing_pressed());
 
-    // PS4_GAMEPAD.configure_device();
 
     exit(0);
 

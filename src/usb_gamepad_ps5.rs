@@ -198,7 +198,8 @@ pub const DUALSENSE: UsbGadgetDescriptor = UsbGadgetDescriptor {
     },
 };
 fn _write_output_once(_: &UniversalGamepad) {
-    todo!()
+    println!("_write_output_once test");
+    todo!();
 }
 
 fn ___() {
