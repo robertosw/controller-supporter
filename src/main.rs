@@ -1,4 +1,4 @@
-#![allow(dead_code, unreachable_code)]
+#![allow(dead_code)]
 
 #[macro_use]
 extern crate version;
@@ -12,6 +12,7 @@ use std::env;
 use std::fs::File;
 use std::io::Write;
 use std::process::exit;
+use std::process::Command;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -31,7 +32,6 @@ mod usb_gamepad_ps5;
 use crate::bluetooth_fn::*;
 use crate::hidapi_fn::{get_hid_gamepad, process_input};
 use crate::universal_gamepad::UniversalGamepad;
-use crate::usb_gamepad_ps4::DUALSHOCK;
 use crate::usb_gamepad_ps5::DUALSENSE;
 
 //  if working inside a docker container: (started with the docker-compose from project root)
@@ -42,66 +42,16 @@ use crate::usb_gamepad_ps5::DUALSENSE;
 
 pub const HID_ARRAY_SIZE: usize = 75;
 
-struct Test {}
-
-impl Test {}
-
 fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");
 
-    DUALSHOCK.configure_device();
-    DUALSHOCK.write_output_once(&UniversalGamepad::nothing_pressed());
-
     DUALSENSE.configure_device();
-    DUALSENSE.write_output_once(&UniversalGamepad::nothing_pressed());
-
+    DUALSENSE.write_output_once(&UniversalGamepad::nothing_pressed(), 0, 0);
 
     exit(0);
 
     // _read_gamepad_input();
-}
-
-fn _generate_output_keyboard() {
-    // Currently simulating keyboard
-
-    const REPORT_LENGTH: usize = 8; // see usb_gamepads.rs or Gamepad Info Collection.md
-    const DURATION_MS: u64 = 4000;
-
-    loop {
-        let mut hidg0 = match File::options().write(true).append(false).open("/dev/hidg0") {
-            Ok(file) => file,
-            Err(err) => {
-                println!("Could not open file hidg0 {err}");
-                exit(1);
-            }
-        };
-
-        let out: [u8; REPORT_LENGTH] = [0x11, 0x22, 0x33, 0x44, 0x55, 0xFF, 0xAA, 0x00];
-
-        match hidg0.write_all(&out) {
-            // Ok(bytes) => print!("{bytes}b out"),
-            Ok(_) => (),
-            Err(err) => {
-                println!("write to hidg0 failed: {:?}", err);
-            }
-        }
-
-        // TODO achieve a real timed interval
-        thread::sleep(Duration::from_millis(150));
-
-        let out: [u8; REPORT_LENGTH] = [0; REPORT_LENGTH];
-
-        match hidg0.write_all(&out) {
-            // Ok(bytes) => print!("{bytes}b out"),
-            Ok(_) => (),
-            Err(err) => {
-                println!("write to hidg0 failed: {:?}", err);
-            }
-        }
-
-        thread::sleep(Duration::from_millis(150));
-    }
 }
 
 fn _read_gamepad_input() -> ! {
@@ -181,7 +131,27 @@ fn _bt_program_flow() {
         }
     };
 
-    bt_power_on();
+    {
+        let output_power_on = match Command::new("bluetoothctl").args(["power", "on"]).output() {
+            Ok(out) => out,
+            Err(err) => {
+                println!("unwrapping the output failed: {:?}", err);
+                exit(1);
+            }
+        };
+
+        let stdout = String::from_utf8(output_power_on.stdout).ok();
+        let stderr = String::from_utf8(output_power_on.stderr).ok();
+
+        if !output_power_on.status.success() {
+            println!("bluetoothctl power on failed:");
+            println!("{:?}", stderr);
+            exit(1);
+        }
+
+        println!("Stdout: {:?}", stdout);
+        println!("Stderr: {:?}", stderr);
+    };
     let (shared_mem_scan_output, thread_handle) = bt_scan_on_threaded();
 
     // find new controllers

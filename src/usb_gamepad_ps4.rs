@@ -281,6 +281,6 @@ pub const DUALSHOCK: UsbGadgetDescriptor = UsbGadgetDescriptor {
     },
 };
 
-fn _write_output_once(input: &UniversalGamepad) {
+fn _write_output_once(_gamepad: &UniversalGamepad, _counter: u8, _seconds: u8) {
     todo!();
 }

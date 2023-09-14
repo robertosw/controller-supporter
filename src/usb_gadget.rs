@@ -38,13 +38,13 @@ pub struct UsbGadgetDescriptor<'a> {
     pub strings_0x409: UsbGadgetStrings<'a>,
     pub configs_c1: UsbGadgetConfigs<'a>,
     pub functions_hid: UsbGadgetFunctionsHid,
-    pub write_output_once: fn(&UniversalGamepad),
+    pub write_output_once: fn(&UniversalGamepad, u8, u8),
 }
 
 impl UsbGadgetDescriptor<'_> {
     /// Calls the function pointer `write_output_once` (was provided at instantiation)
-    pub fn write_output_once(&self, input: &UniversalGamepad) {
-        (self.write_output_once)(input);
+    pub fn write_output_once(&self, gamepad: &UniversalGamepad, counter: u8, seconds: u8) {
+        (self.write_output_once)(gamepad, counter, seconds);
     }
 
     /// Using linux' ConfigFS, create the given usb device

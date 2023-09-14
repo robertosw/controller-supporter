@@ -1,3 +1,9 @@
+use std::fs::File;
+use std::io::Write;
+use std::process::exit;
+use std::thread;
+use std::time::Duration;
+
 use crate::universal_gamepad::UniversalGamepad;
 use crate::usb_gadget::*;
 use crate::UsbGadgetDescriptor;
@@ -63,6 +69,39 @@ pub const GENERIC_KEYBOARD: UsbGadgetDescriptor = UsbGadgetDescriptor {
     },
 };
 
-fn _write_output_once(input: &UniversalGamepad) {
-    todo!();
+fn _write_output_once(_gamepad: &UniversalGamepad, _counter: u8, _seconds: u8) {
+    const REPORT_LENGTH: usize = 8;
+
+    let mut hidg0 = match File::options().write(true).append(false).open("/dev/hidg0") {
+        Ok(file) => file,
+        Err(err) => {
+            println!("Could not open file hidg0 {err}");
+            exit(1);
+        }
+    };
+
+    let out: [u8; REPORT_LENGTH] = [0x11, 0x22, 0x33, 0x44, 0x55, 0xFF, 0xAA, 0x00];
+
+    match hidg0.write_all(&out) {
+        // Ok(bytes) => print!("{bytes}b out"),
+        Ok(_) => (),
+        Err(err) => {
+            println!("write to hidg0 failed: {:?}", err);
+        }
+    }
+
+    // TODO achieve a real timed interval
+    thread::sleep(Duration::from_millis(150));
+
+    let out: [u8; REPORT_LENGTH] = [0; REPORT_LENGTH];
+
+    match hidg0.write_all(&out) {
+        // Ok(bytes) => print!("{bytes}b out"),
+        Ok(_) => (),
+        Err(err) => {
+            println!("write to hidg0 failed: {:?}", err);
+        }
+    }
+
+    thread::sleep(Duration::from_millis(150));
 }
