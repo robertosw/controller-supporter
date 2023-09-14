@@ -466,7 +466,7 @@ pub const PS4_GAMEPAD: UsbGadgetDescriptor = UsbGadgetDescriptor {
             0xB1, 0x02, //   Feature (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
             0xC0, // End Collection
 
-            // 507 bytes
+                  // 507 bytes
         ],
         report_length: 64,
         hid_subclass: 0,
@@ -478,7 +478,7 @@ pub const GENERIC_KEYBOARD: UsbGadgetDescriptor = UsbGadgetDescriptor {
     b_device_class: 0,
     b_device_sub_class: 0,
     b_device_protocol: 0,
-    b_max_packet_size0: 64,
+    b_max_packet_size0: 8,
     id_vendor: 0x1d6b,
     id_product: 0x0104,
     bcd_device: 0x0100,
@@ -491,66 +491,6 @@ pub const GENERIC_KEYBOARD: UsbGadgetDescriptor = UsbGadgetDescriptor {
         bm_attributes: 0b10000000,
         max_power: 250,
         configs_string: "Configuration 1",
-    },
-    functions_hid: UsbGadgetFunctionsHid {
-        hid_subclass: 1,
-        protocol: 1,
-        report_length: 8,
-        report_descriptor: &[
-            0x05, 0x01, // Usage Page (Generic Desktop Ctrls)
-            0x09, 0x06, // Usage (Keyboard)
-            0xA1, 0x01, // Collection (Application)
-            0x05, 0x07, //   Usage Page (Kbrd/Keypad)
-            0x19, 0xE0, //   Usage Minimum (0xE0)
-            0x29, 0xE7, //   Usage Maximum (0xE7)
-            0x15, 0x00, //   Logical Minimum (0)
-            0x25, 0x01, //   Logical Maximum (1)
-            0x75, 0x01, //   Report Size (1)
-            0x95, 0x08, //   Report Count (8)
-            0x81, 0x02, //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-            0x95, 0x01, //   Report Count (1)
-            0x75, 0x08, //   Report Size (8)
-            0x81, 0x03, //   Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-            0x95, 0x05, //   Report Count (5)
-            0x75, 0x01, //   Report Size (1)
-            0x05, 0x08, //   Usage Page (LEDs)
-            0x19, 0x01, //   Usage Minimum (Num Lock)
-            0x29, 0x05, //   Usage Maximum (Kana)
-            0x91, 0x02, //   Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
-            0x95, 0x01, //   Report Count (1)
-            0x75, 0x03, //   Report Size (3)
-            0x91, 0x03, //   Output (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
-            0x95, 0x06, //   Report Count (6)
-            0x75, 0x08, //   Report Size (8)
-            0x15, 0x00, //   Logical Minimum (0)
-            0x25, 0x65, //   Logical Maximum (101)
-            0x05, 0x07, //   Usage Page (Kbrd/Keypad)
-            0x19, 0x00, //   Usage Minimum (0x00)
-            0x29, 0x65, //   Usage Maximum (0x65)
-            0x81, 0x00, //   Input (Data,Array,Abs,No Wrap,Linear,Preferred State,No Null Position)
-            0xC0, // End Collection
-        ],
-    },
-};
-
-pub const MULTIFUNCTION_COMPOSITE: UsbGadgetDescriptor = UsbGadgetDescriptor {
-    bcd_usb: 0x0200,
-    b_device_class: 0,
-    b_device_sub_class: 0,
-    b_device_protocol: 0,
-    b_max_packet_size0: 64,
-    id_vendor: 0x1d6b,
-    id_product: 0x0104,
-    bcd_device: 0x0100,
-    strings_0x409: UsbGadgetStrings {
-        manufacturer: "Manufacturer",
-        product: "USB Gadget with multiple functions",
-        serialnumber: "",
-    },
-    configs_c1: UsbGadgetConfigs {
-        bm_attributes: 0b11000000,
-        max_power: 500,
-        configs_string: "",
     },
     functions_hid: UsbGadgetFunctionsHid {
         hid_subclass: 1,

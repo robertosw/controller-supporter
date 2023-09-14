@@ -13,6 +13,7 @@ use rand::Rng;
 use std::env;
 use std::fs::File;
 use std::io::Write;
+use std::os::unix::prelude::OpenOptionsExt;
 use std::process::exit;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -32,6 +33,7 @@ use crate::bluetooth_fn::*;
 use crate::hidapi_fn::GamepadModel;
 use crate::hidapi_fn::{get_hid_gamepad, process_input};
 use crate::hidapi_gamepad::UniversalGamepad;
+use crate::usb_gamepads::GENERIC_KEYBOARD;
 use crate::usb_gamepads::PS4_GAMEPAD;
 use crate::usb_gamepads::PS5_GAMEPAD;
 
@@ -47,28 +49,68 @@ fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");
 
+    // GENERIC_KEYBOARD.configure_device();
+    // _generate_output_keyboard();
+
     PS5_GAMEPAD.configure_device();
+    _generate_output_ps5();
+
     // PS4_GAMEPAD.configure_device();
-    _generate_output();
 
     exit(0);
-    // GENERIC_KEYBOARD.configure_device();
 
     // _read_gamepad_input();
 }
 
-fn _generate_output() {
-    let mut hidg0 = match File::options().write(true).truncate(false).append(true).open("/dev/hidg0") {
-        Ok(file) => file,
-        Err(_) => print_and_exit("Could not open file bmAttributes", 13),
-    };
+fn _generate_output_keyboard() {
+    // Currently simulating keyboard
+
+    const REPORT_LENGTH: usize = 8; // see usb_gamepads.rs or Gamepad Info Collection.md
+    const DURATION_MS: u64 = 4000;
+
+    loop {
+        let mut hidg0 = match File::options().write(true).append(false).open("/dev/hidg0") {
+            Ok(file) => file,
+            Err(err) => {
+                println!("Could not open file hidg0 {err}");
+                exit(1);
+            }
+        };
+
+        let out: [u8; REPORT_LENGTH] = [0x11, 0x22, 0x33, 0x44, 0x55, 0xFF, 0xAA, 0x00];
+
+        match hidg0.write_all(&out) {
+            // Ok(bytes) => print!("{bytes}b out"),
+            Ok(_) => (),
+            Err(err) => {
+                println!("write to hidg0 failed: {:?}", err);
+            }
+        }
+
+        // TODO achieve a real timed interval
+        thread::sleep(Duration::from_millis(150));
+
+        let out: [u8; REPORT_LENGTH] = [0; REPORT_LENGTH];
+
+        match hidg0.write_all(&out) {
+            // Ok(bytes) => print!("{bytes}b out"),
+            Ok(_) => (),
+            Err(err) => {
+                println!("write to hidg0 failed: {:?}", err);
+            }
+        }
+
+        thread::sleep(Duration::from_millis(150));
+    }
+}
+
+fn _generate_output_ps5() {
+    const O_NONBLOCK: i32 = 2048;
 
     // Currently simulating PS5 Dual Sense
 
-    const REPORT_LENGTH: usize = 64; // see usb_gamepads.rs or Gamepad Info Collection.md
-
+    const REPORT_LENGTH: usize = PS5_GAMEPAD.b_max_packet_size0 as usize; // see usb_gamepads.rs or Gamepad Info Collection.md
     const DURATION_MS: u64 = 4000;
-    let mut _output_buf: [u8; REPORT_LENGTH] = [0; REPORT_LENGTH];
 
     let mut dummy: UniversalGamepad = UniversalGamepad::nothing_pressed();
     let mut counter: u8 = 0;
@@ -77,7 +119,16 @@ fn _generate_output() {
     let mut oscillate = 0;
     let mut up: bool = true;
 
+    println!("sleeping 10s");
+    thread::sleep(Duration::from_secs(10));
+    println!("lets go");
+
     loop {
+        let mut hidg0 = match File::options().write(true).append(false).open("/dev/hidg0") {
+            Ok(file) => file,
+            Err(_) => print_and_exit("Could not open file hidg0", 13),
+        };
+
         counter += 1;
 
         if counter == 255 {
@@ -117,73 +168,72 @@ fn _generate_output() {
             dummy.triggers.left,
             dummy.triggers.right,
             counter,
-            oscillate,          // Buttons and DPad
-            oscillate,          // Special Buttons, Bumpers, Triggers and Sticks (only WHAT is pressed, for triggers not value)
-            logo_touchpad_byte, // Logo / Touchpad
-            0,                  // always 0
-            counter,            //
-            seconds,            //
-            0xee,               // might be charging state (in %) (unlikely, changes drastically after reconnect)
-            0xad,               // ??
-            0x00,               // gyroskop here (seems to be relative, not absolute)
-            0x00,               // gyroskop here (seems to be relative, not absolute)
-            0xff,               // gyroskop here (seems to be relative, not absolute)
-            0xff,               // gyroskop here (seems to be relative, not absolute)
-            0x02,               // gyroskop here (seems to be relative, not absolute)
-            0x00,               // gyroskop here (seems to be relative, not absolute)
-            0x06,               // gyroskop here (seems to be relative, not absolute)
-            0x00,               // gyroskop here (seems to be relative, not absolute)
-            0x81,               // gyroskop here (seems to be relative, not absolute)
-            0x1f,               // gyroskop here (seems to be relative, not absolute)
-            0x07,               // gyroskop here (seems to be relative, not absolute)
-            0x06,               // gyroskop here (seems to be relative, not absolute)
-            0x46,               // gyroskop here (seems to be relative, not absolute)
-            0x66,               // gyroskop here (seems to be relative, not absolute)
-            counter,            // this is a really slow counter (goes up every ~10s)
-            0x00,               // ??
-            0x14,               // ??
-            0x80,               // ??
-            0x00,               // ??
-            0x00,               // ??
-            0x00,               // ??
-            0x80,               // ??
-            0x00,               // ??
-            0x00,               // ??
-            0x00,               // ??
-            0x00,               // ??
-            0x09,               // ??
-            0x09,               // ??
-            0x00,               // ??
-            0x00,               // ??
-            0x00,               // ??
-            0x00,               // ??
-            0x00,               // ??
-            0xe3,               // random?
-            0x79,               // random?
-            0xab,               // random?
-            0x00,               // slow counter
-            0x17,               // constant?
-            0x08,               // constant?
-            0x00,               // constant?
-            0x5b,               // random?
-            0x7f,               // random?
-            0xef,               // random?
-            0x9c,               // random?
-            0xac,               // random?
-            0x03,               // random?
-            0x92,               // random?
-            0x30,               // random?
+            oscillate, // Buttons and DPad
+            oscillate, // Special Buttons, Bumpers, Triggers and Sticks (only WHAT is pressed, for triggers not value)
+            0,         // Logo / Touchpad
+            0,         // always 0
+            counter,   //
+            seconds,   //
+            0xee,      // might be charging state (in %) (unlikely, changes drastically after reconnect)
+            0xad,      // ??
+            0x00,      // gyroskop here (seems to be relative, not absolute)
+            0x00,      // gyroskop here (seems to be relative, not absolute)
+            0xff,      // gyroskop here (seems to be relative, not absolute)
+            0xff,      // gyroskop here (seems to be relative, not absolute)
+            0x02,      // gyroskop here (seems to be relative, not absolute)
+            0x00,      // gyroskop here (seems to be relative, not absolute)
+            0x06,      // gyroskop here (seems to be relative, not absolute)
+            0x00,      // gyroskop here (seems to be relative, not absolute)
+            0x81,      // gyroskop here (seems to be relative, not absolute)
+            0x1f,      // gyroskop here (seems to be relative, not absolute)
+            0x07,      // gyroskop here (seems to be relative, not absolute)
+            0x06,      // gyroskop here (seems to be relative, not absolute)
+            0x46,      // gyroskop here (seems to be relative, not absolute)
+            0x66,      // gyroskop here (seems to be relative, not absolute)
+            counter,   // this is a really slow counter (goes up every ~10s)
+            0x00,      // ??
+            0x14,      // ??
+            0x80,      // ??
+            0x00,      // ??
+            0x00,      // ??
+            0x00,      // ??
+            0x80,      // ??
+            0x00,      // ??
+            0x00,      // ??
+            0x00,      // ??
+            0x00,      // ??
+            0x09,      // ??
+            0x09,      // ??
+            0x00,      // ??
+            0x00,      // ??
+            0x00,      // ??
+            0x00,      // ??
+            0x00,      // ??
+            0xe3,      // random?
+            0x79,      // random?
+            0xab,      // random?
+            0x00,      // slow counter
+            0x17,      // constant?
+            0x08,      // constant?
+            0x00,      // constant?
+            0x5b,      // random?
+            0x7f,      // random?
+            0xef,      // random?
+            0x9c,      // random?
+            0xac,      // random?
+            0x03,      // random?
+            0x92,      // random?
+            0x30,      // random?
         ];
 
         match hidg0.write_all(&out) {
             Ok(_) => (),
             Err(err) => {
                 println!("write to hidg0 failed: {:?}", err);
-                exit(1);
             }
         }
 
-        // TODO achiev a real times interval
+        // TODO achieve a real timed interval
         thread::sleep(Duration::from_millis(4));
     }
 }
