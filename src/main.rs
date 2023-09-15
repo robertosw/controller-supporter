@@ -8,6 +8,7 @@ extern crate termion;
 
 use ctrlc::set_handler;
 use hidapi::HidApi;
+use rand::Rng;
 use std::env;
 use std::process::exit;
 use std::process::Command;
@@ -50,7 +51,7 @@ fn main() {
     // If this is done later, the host might run into errors when trying to classify this device and turn it off
     // TODO output_gamepad should be expected from a command argument or set to a default if not given
 
-    single_thread_interval(Duration::from_micros(500));
+    single_thread_interval(Duration::from_micros(1000));
 
     exit(0);
 
@@ -103,27 +104,50 @@ fn single_thread_interval(interval: Duration) {
     let start: Instant = Instant::now();
     let interval_ns = interval.as_nanos();
     let mut interval_counts_before: u128 = 0;
+    let mut code_ran: bool = false;
 
     let mut diffs: Vec<Duration> = Vec::new();
 
-    const ROUNDS: u128 = 1000;
+    const ROUNDS: u128 = 10000;
 
+    let mut code_counter = 0;
+
+    // replace with loop later
     while interval_counts_before < ROUNDS {
-        let elapsed_ns: u128 = start.elapsed().as_nanos();
+        // First run the code, which might take longer than the given interval
+        // in which case this loops waits for the next interval
+        {
+            if code_ran == false {
+                // program code that should be run once per cycle here
+
+                random_wait(Duration::from_micros(100), Duration::from_micros(500));
+                code_counter += 1;
+            }
+            code_ran = true;
+        }
+
+        let now: Instant = Instant::now();
+        let elapsed_ns: u128 = (now - start).as_nanos();
         let interval_counts_now: u128 = elapsed_ns / interval_ns;
 
-        if interval_counts_now > interval_counts_before {
-            let now = Instant::now();
-            let expected = start + (interval * interval_counts_now as u32);
+        // By how many ns does the current run deviate from the cycle
+        let diff_from_interval_ns: u128 = elapsed_ns % interval_ns;
 
+        let is_next_interval: bool = interval_counts_now > interval_counts_before;
+        let is_close_enough: bool = (diff_from_interval_ns as f32 / interval_ns as f32) <= 0.05;
+
+        if is_next_interval && is_close_enough {
+            let expected: Instant = start + (interval * interval_counts_now as u32);
             diffs.push(now - expected);
 
+            {
+                // code that is supposed to be timed, here
+            }
 
-            
             interval_counts_before = interval_counts_now;
+            code_ran = false;
         }
     }
-
 
     //  benchmark results
 
@@ -136,8 +160,23 @@ fn single_thread_interval(interval: Duration) {
         avg_perc += error_percent;
     }
 
+    println!("");
+    println!("Code ran {}x, target was {}x", code_counter, ROUNDS);
     println!("Avg ABS  {} ns", avg_ns / ROUNDS);
     println!("Avg PERC {:2.1?} %", avg_perc / ROUNDS as f64);
+}
+
+fn random_wait(min: Duration, max: Duration) {
+    let min_ns = min.as_nanos() as u64;
+    let max_ns = max.as_nanos() as u64;
+
+    let range: std::ops::RangeInclusive<u64> = min_ns..=max_ns;
+
+    let mut rng = rand::thread_rng();
+    let wait_time = Duration::from_nanos(rng.gen_range(range));
+
+    // println!("waiting for {:?}", wait_time);
+    thread::sleep(wait_time);
 }
 
 // Ideas for program flow
