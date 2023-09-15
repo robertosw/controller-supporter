@@ -1,10 +1,8 @@
 pub struct UniversalGamepad {
     pub sticks: Sticks,
     pub triggers: Triggers,
-    pub bumpers: Bumpers,
-    pub dpad: DPad,
-    pub buttons: MainButtons,
-    pub specials: SpecialButtons,
+    pub buttons: Buttons,
+    pub other: Other,
 }
 impl UniversalGamepad {
     pub fn nothing_pressed() -> Self {
@@ -14,28 +12,35 @@ impl UniversalGamepad {
                 right: Stick { x: 0, y: 0, pressed: false },
             },
             triggers: Triggers { left: 0, right: 0 },
-            bumpers: Bumpers { left: false, right: false },
-            dpad: DPad {
-                up: false,
-                down: false,
-                left: false,
-                right: false,
+            buttons: Buttons {
+                bumpers: Bumpers { left: false, right: false },
+                dpad: DPad {
+                    up: false,
+                    down: false,
+                    left: false,
+                    right: false,
+                },
+                main: MainButtons {
+                    upper: false,
+                    lower: false,
+                    left: false,
+                    right: false,
+                },
+                specials: SpecialButtons {
+                    right: false,
+                    left: false,
+                    logo: false,
+                },
             },
-            buttons: MainButtons {
-                upper: false,
-                lower: false,
-                left: false,
-                right: false,
-            },
-            specials: SpecialButtons {
-                touchpad: false,
-                right: false,
-                left: false,
-                logo: false,
+            other: Other {
+                touchpad: None,
+                gyroscope: None,
             },
         }
     }
 }
+
+// ----- //
 
 pub struct Sticks {
     pub left: Stick,
@@ -50,10 +55,28 @@ impl Sticks {
     }
 }
 
+pub struct Stick {
+    pub x: u8,
+    pub y: u8,
+    pub pressed: bool,
+}
+
+// ----- //
+
 pub struct Triggers {
     pub left: u8,
     pub right: u8,
 }
+
+// ----- //
+
+pub struct Buttons {
+    pub bumpers: Bumpers,
+    pub dpad: DPad,
+    pub main: MainButtons,
+    pub specials: SpecialButtons,
+}
+
 pub struct Bumpers {
     pub left: bool,
     pub right: bool,
@@ -99,8 +122,6 @@ impl MainButtons {
 }
 
 pub struct SpecialButtons {
-    pub touchpad: bool,
-
     /// menu button
     pub right: bool,
 
@@ -113,7 +134,6 @@ pub struct SpecialButtons {
 impl SpecialButtons {
     pub fn allfalse() -> Self {
         Self {
-            touchpad: false,
             right: false,
             left: false,
             logo: false,
@@ -121,8 +141,22 @@ impl SpecialButtons {
     }
 }
 
-pub struct Stick {
-    pub x: u8,
-    pub y: u8,
+// ----- //
+
+pub struct Other {
+    pub touchpad: Option<Touchpad>,
+    pub gyroscope: Option<Gyroscope>,
+}
+
+pub struct Gyroscope {
+    pub x_coord: u8,
+    pub y_coord: u8,
+    pub z_coord: u8,
+}
+
+pub struct Touchpad {
+    pub x_coord: u8,
+    pub y_coord: u8,
+    pub touched: bool,
     pub pressed: bool,
 }

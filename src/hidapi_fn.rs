@@ -116,23 +116,22 @@ fn _output_gamepad_btns(output: &mut UniversalGamepad) {
 
     println!("Tl: {:?}", output.triggers.left);
     println!("Tr: {:?}", output.triggers.right);
-    println!("Bl: {:?}", output.bumpers.left);
-    println!("Br: {:?}", output.bumpers.right);
+    println!("Bl: {:?}", output.buttons.bumpers.left);
+    println!("Br: {:?}", output.buttons.bumpers.right);
 
-    println!("X: {:?}", output.buttons.lower);
-    println!("O: {:?}", output.buttons.right);
-    println!("□: {:?}", output.buttons.left);
-    println!("∆: {:?}", output.buttons.upper);
+    println!("X: {:?}", output.buttons.main.lower);
+    println!("O: {:?}", output.buttons.main.right);
+    println!("□: {:?}", output.buttons.main.left);
+    println!("∆: {:?}", output.buttons.main.upper);
 
-    println!("↑: {:?}", output.dpad.up);
-    println!("→: {:?}", output.dpad.right);
-    println!("↓: {:?}", output.dpad.down);
-    println!("←: {:?}", output.dpad.left);
+    println!("↑: {:?}", output.buttons.dpad.up);
+    println!("→: {:?}", output.buttons.dpad.right);
+    println!("↓: {:?}", output.buttons.dpad.down);
+    println!("←: {:?}", output.buttons.dpad.left);
 
-    println!("Special R: {:?}", output.specials.right);
-    println!("Special L: {:?}", output.specials.left);
-    println!("Logo: {:?}", output.specials.logo);
-    println!("Touchpad: {:?}", output.specials.touchpad);
+    println!("Special R: {:?}", output.buttons.specials.right);
+    println!("Special L: {:?}", output.buttons.specials.left);
+    println!("Logo: {:?}", output.buttons.specials.logo);
 }
 
 fn _process_input_unknown(input: [u8; HID_ARRAY_SIZE]) {
@@ -172,7 +171,7 @@ fn _process_input_ps5(input: [u8; HID_ARRAY_SIZE], output: &mut UniversalGamepad
         left: input[6],
         right: input[7],
     };
-    output.bumpers = Bumpers {
+    output.buttons.bumpers = Bumpers {
         left: match input[10] {
             1 => true,
             _ => false,
@@ -182,23 +181,19 @@ fn _process_input_ps5(input: [u8; HID_ARRAY_SIZE], output: &mut UniversalGamepad
             _ => false,
         },
     };
-    output.buttons = MainButtons {
+    output.buttons.main = MainButtons {
         upper: (input[9] & 0b10000000 != 0),
         right: (input[9] & 0b01000000 != 0),
         lower: (input[9] & 0b00100000 != 0),
         left: (input[9] & 0b00010000 != 0),
     };
-    output.dpad = DPad {
+    output.buttons.dpad = DPad {
         right: (dpad == 1 || dpad == 2 || dpad == 3),
         down: (dpad == 3 || dpad == 4 || dpad == 5),
         left: (dpad == 5 || dpad == 6 || dpad == 7),
         up: (dpad == 0 || dpad == 1 || dpad == 7),
     };
-    output.specials = SpecialButtons {
-        touchpad: match input[11] {
-            2 => true,
-            _ => false,
-        },
+    output.buttons.specials = SpecialButtons {
         right: match input[10] {
             32 => true,
             _ => false,
@@ -212,6 +207,15 @@ fn _process_input_ps5(input: [u8; HID_ARRAY_SIZE], output: &mut UniversalGamepad
             _ => false,
         },
     };
+    output.other.touchpad = Some(Touchpad {
+        x_coord: 0,
+        y_coord: 0,
+        touched: false,
+        pressed: match input[11] {
+            2 => true,
+            _ => false,
+        },
+    });
 
     // maybe bytes 35 and 36 together are left-right
 
