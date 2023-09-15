@@ -1,6 +1,7 @@
 use crate::universal_gamepad::UniversalGamepad;
 use crate::usb_gadget::*;
 use crate::UsbGadgetDescriptor;
+use crate::usb_gamepad::Gamepad;
 
 pub const DUALSENSE: Gamepad = Gamepad {
     gadget: UsbGadgetDescriptor {
@@ -199,7 +200,7 @@ pub const DUALSENSE: Gamepad = Gamepad {
     universal_gamepad_to_usb_output: _universal_gamepad_to_usb_output_dualsense,
 };
 
-fn _bt_input_to_universal_gamepad_dualsense(_bt_input: Vec<u8>) -> UniversalGamepad {
+fn _bt_input_to_universal_gamepad_dualsense(_bt_input: &Vec<u8>) -> UniversalGamepad {
     todo!();
 }
 

@@ -14,6 +14,7 @@ use std::process::Command;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 use usb_gadget::UsbGadgetDescriptor;
@@ -23,14 +24,16 @@ mod helper_fn;
 mod hidapi_fn;
 mod universal_gamepad;
 mod usb_gadget;
+mod usb_gamepad;
 mod usb_gamepad_keyboard;
 mod usb_gamepad_ps4;
 mod usb_gamepad_ps5;
 
 use crate::bluetooth_fn::*;
 use crate::hidapi_fn::get_hid_gamepad;
-use crate::hidapi_fn::read_gamepad_input;
-use crate::usb_gadget::Gamepad;
+use crate::hidapi_fn::read_bt_gamepad_input;
+use crate::universal_gamepad::UniversalGamepad;
+use crate::usb_gamepad::Gamepad;
 use crate::usb_gamepad_ps4::DUALSHOCK;
 use crate::usb_gamepad_ps5::DUALSENSE;
 
@@ -40,19 +43,18 @@ use crate::usb_gamepad_ps5::DUALSENSE;
 //  if working on native os as non root: (from /gamepad-bridge)
 //  - build & run   `cargo build --release && sudo chown root:root target/release/gamepad-bridge && sudo chmod +s target/release/gamepad-bridge && /target/release/gamepad-bridge`
 
-
 fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");
 
-    // BT connection here
+    // ----- BT connection here
 
-    // What gamepad is connected?
+    // ----- What gamepad is connected?
     let api = match HidApi::new() {
         Ok(api) => api,
         Err(err) => print_error_and_exit!("Error getting HidApi access", err, 2),
     };
-    
+
     let (device, input_gamepad): (hidapi::HidDevice, &Gamepad) = match get_hid_gamepad(&api) {
         Ok((device, model)) => match model {
             hidapi_fn::GamepadModel::PS5 => (device, &DUALSENSE),
@@ -60,27 +62,22 @@ fn main() {
         },
         Err(err) => print_error_and_exit!("Error accessing connected hid gamepad", err, 1),
     };
-    
-    // Reading input of BT gamepad
-    
-    
+
+    // ----- Reading input of BT gamepad
+
+    let universal_gamepad: Arc<Mutex<UniversalGamepad>> = Arc::new(Mutex::new(UniversalGamepad::nothing_pressed()));
+    let universal_gamepad_clone = universal_gamepad.clone();
+    let thread_handle_read_input = thread::spawn(move || read_bt_gamepad_input(device, input_gamepad, universal_gamepad_clone));
+
+    // ----- Write Output to gadget
+
     // TODO output_gamepad should be expected from a command argument or set to a default if not given
     let output_gamepad: &Gamepad = &DUALSENSE;
 
-    // output_gamepad.gadget.configure_device();
-    output_gamepad.write_dummy_data_continously();
+    output_gamepad.gadget.configure_device();
 
-    read_gamepad_input(input_gamepad);
+    thread_handle_read_input.join().unwrap();
 }
-
-// TODO Check if hidg0 device exists
-
-// TODO Retry hidg crate
-
-// TODO Write to hidg0 device manually (example)
-// sudo su
-// echo -ne "\0\0\x4\0\0\0\0\0" > /dev/hidg0 #press the A-button
-// echo -ne "\0\0\0\0\0\0\0\0" > /dev/hidg0 #release all keys
 
 // Ideas for program flow
 // 1. the whole procedure (BT finding, input read, output to usb) is being duplicated for each player right inside main. So 1-4 threads

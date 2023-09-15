@@ -11,7 +11,7 @@ use std::process::Command;
 macro_rules! print_and_exit {
     ($msg: expr, $code: expr) => {{
         let code: i32 = $code;
-        println!("{:#?}", $msg);
+        println!("{}", $msg);
         exit(code);
     }};
 }
@@ -28,7 +28,7 @@ macro_rules! print_and_exit {
 macro_rules! print_error_and_exit {
     ($msg: expr, $err: expr, $code: expr) => {{
         let code: i32 = $code;
-        println!("{:#?} {:#?}", $msg, $err);
+        println!("{} - {:#?}", $msg, $err);
         exit(code);
     }};
 }

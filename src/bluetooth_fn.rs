@@ -183,9 +183,9 @@ fn _bt_scan_on_thread(scan_output: Arc<Mutex<Vec<String>>>) {
     for line in stdout.lines() {
         match line {
             Ok(line) => {
-                println!("Output  out: {}", line);
+                println!("Output out: {}", line);
                 {
-                    let mut scan_output_locked = scan_output.lock().unwrap();
+                    let mut scan_output_locked = scan_output.lock().expect("Locking Arc<Mutex<Vec<String>>> failed!");
                     scan_output_locked.push(line);
                     // locks are released after a block goes out of sope
                 }

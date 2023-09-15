@@ -1,4 +1,4 @@
-use crate::{universal_gamepad::UniversalGamepad, usb_gadget::*};
+use crate::{universal_gamepad::UniversalGamepad, usb_gadget::*, usb_gamepad::Gamepad};
 
 pub const DUALSHOCK: Gamepad = Gamepad {
     gadget: UsbGadgetDescriptor {
@@ -284,10 +284,10 @@ pub const DUALSHOCK: Gamepad = Gamepad {
     universal_gamepad_to_usb_output: _universal_gamepad_to_usb_output_dualsense,
 };
 
-fn _bt_input_to_universal_gamepad_dualsense(_bt_input: Vec<u8>) -> UniversalGamepad {
+fn _bt_input_to_universal_gamepad_dualsense(_bt_input: &Vec<u8>) -> UniversalGamepad {
     todo!();
 }
 
-fn _universal_gamepad_to_usb_output_dualsense(gamepad: &UniversalGamepad) -> Vec<u8> {
+fn _universal_gamepad_to_usb_output_dualsense(_gamepad: &UniversalGamepad) -> Vec<u8> {
     todo!();
 }

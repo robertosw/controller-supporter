@@ -1,8 +1,15 @@
 use ::hidapi::{BusType, HidApi};
 use hidapi::{DeviceInfo, HidDevice};
-use std::{process::exit, thread, time::Duration};
+use std::{
+    sync::{Arc, Mutex},
+    thread,
+    time::Duration,
+};
 
-use crate::{universal_gamepad::*, usb_gadget::Gamepad};
+use crate::{
+    universal_gamepad::{self, Bumpers, DPad, MainButtons, SpecialButtons, Stick, Sticks, Touchpad, Triggers, UniversalGamepad},
+    usb_gamepad::Gamepad,
+};
 
 const HID_ARRAY_SIZE: usize = 64;
 
@@ -97,30 +104,14 @@ fn _get_bluetooth_hid_devices(api: &HidApi) -> Result<Vec<&DeviceInfo>, ()> {
     return Ok(bluetooth_devices);
 }
 
-pub fn read_gamepad_input(input_gamepad: &Gamepad) -> ! {
-    let api = match HidApi::new() {
-        Ok(api) => api,
-        Err(err) => {
-            println!("Error getting HidApi access: {:?}", err);
-            exit(2);
-        }
-    };
-
-    let (device, model) = match get_hid_gamepad(&api) {
-        Ok(val) => val,
-        Err(_) => exit(1),
-    };
-
-    // --- Read from device --- //
-
-    // if false, calls to read may return nothing, but also dont block
+pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, universal_gamepad: Arc<Mutex<UniversalGamepad>>) -> ! {
+    // if set to false, calls to read may return nothing, but also dont block
     match device.set_blocking_mode(false) {
         Ok(_) => (),
         Err(err) => panic!("HidError: {:?}", err),
     };
 
-    let mut input_buf = [0 as u8; HID_ARRAY_SIZE];
-    let mut output_gamepad: UniversalGamepad = UniversalGamepad::nothing_pressed();
+    let mut bt_input: Vec<u8> = Vec::new();
 
     print!("{}", termion::clear::All);
 
@@ -128,15 +119,14 @@ pub fn read_gamepad_input(input_gamepad: &Gamepad) -> ! {
         // setting -1 as timeout means waiting for the next input event, in this mode valid_bytes_count == HID_ARRAY_SIZE
         // setting 0ms as timeout, probably means sometimes the previous input event is taken, but the execution time of this whole block is 100x faster!
         // also: reading in blocking mode might be problematic if the gamepad is disconnected => infinite wait
-        let _valid_bytes_count: usize = match device.read_timeout(&mut input_buf[..], 0) {
-            Ok(value) => {
-                if value != HID_ARRAY_SIZE {
-                    continue;
-                } else {
-                    _process_input(input_buf, &model, &mut output_gamepad);
-                    value
+        match device.read_timeout(&mut bt_input[..], 0) {
+            Ok(value) => match value {
+                HID_ARRAY_SIZE => {
+                    let mut gamepad_locked = universal_gamepad.lock().expect("Locking Arc<Mutex<UniversalGamepad>> failed!");
+                    *gamepad_locked = input_gamepad.bt_input_to_universal_gamepad(&bt_input);
                 }
-            }
+                _ => continue,
+            },
             Err(_) => continue,
         };
 
@@ -146,6 +136,7 @@ pub fn read_gamepad_input(input_gamepad: &Gamepad) -> ! {
 
 /// Expects the input array to be output from hidapi
 fn _process_input(input: [u8; HID_ARRAY_SIZE], model: &GamepadModel, output: &mut UniversalGamepad) {
+    // TODO This function has to be part of each Gamepad instance
     match model {
         GamepadModel::PS5 => {
             _process_input_ps5(input, output);
