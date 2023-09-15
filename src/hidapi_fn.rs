@@ -145,6 +145,6 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, univers
         };
 
         // TODO can this be changed to wait for inputs?
-        thread::sleep(Duration::from_micros(1500));
+        thread::sleep(Duration::from_micros(500));
     }
 }

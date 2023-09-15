@@ -41,7 +41,7 @@ impl Gamepad {
                 Err(err) => println!("write to hidg0 failed: {:?}", err),
             }
 
-            thread::sleep(Duration::from_millis(4));
+            thread::sleep(Duration::from_micros(500));
         }
     }
 
