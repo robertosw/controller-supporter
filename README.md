@@ -21,11 +21,8 @@ If you have any ideas or know of anything I should avoid or be careful with, don
     playstation: probe of 0003:054C:0CE6.0013 failed with error -22
     ```
     - These might be fixable if I actually create all audio functions the real controller has, but I dont think thats the problem
-  - Additionally when trying to write to the file `/dev/hidg0` rust tells me: <br>
-  `code: 108, kind: Uncategorized, message: "Cannot send after transport endpoint shutdown"`
-    - This is the same error that appears when the RPi is not yet connected to a host
-    - This suggests that this file doesnt work as I think
-    - I couldnt find any other sources that show other files which are used as device files for output data
+  - Windows 10 detects the Raspberry Pi as a DualSense gamepad without showing any errors in the Device Manager. 
+- Gamepad-Bridge can correctly simulate joystick and trigger movement for Steams Controller-Test (on Win10)
 
 <br>
 
