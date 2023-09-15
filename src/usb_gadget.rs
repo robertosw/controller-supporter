@@ -28,24 +28,42 @@ const ENG_STR_DIR: &str = "/sys/kernel/config/usb_gadget/raspi/strings/0x409";
 const CONFIGS_DIR: &str = "/sys/kernel/config/usb_gadget/raspi/configs/c.1";
 const FNC_HID_DIR: &str = "/sys/kernel/config/usb_gadget/raspi/functions/hid.usb0";
 
-pub struct UsbGadgetDescriptor<'a> {
-    pub bcd_usb: u16,           // USB HID Specification Release 1.0.                               | 0x200 = 2.00
-    pub b_device_class: u8,     // class code                                                       | 0x00 for HID
-    pub b_device_sub_class: u8, // subclass code                                                    | 0x00 for HID
-    pub b_device_protocol: u8,  // protocol                                                         | 0x00 for HID
-    pub b_max_packet_size0: u8, // Maximum packet size for endpoint zero                            | 8 / 16 / 32 / 64
-    pub id_vendor: u16,         //
-    pub id_product: u16,        //
-    pub bcd_device: u16,        // Device release number (assigned by manufacturer)                 | 0x100 = 1.00
-    pub strings_0x409: UsbGadgetStrings<'a>,
-    pub configs_c1: UsbGadgetConfigs<'a>,
-    pub functions_hid: UsbGadgetFunctionsHid,
-    pub write_output_once: fn(&UniversalGamepad, u8, u8),
+pub struct Gamepad {
+    pub gadget: UsbGadgetDescriptor,
+    pub bt_input_to_universal_gamepad: fn(Vec<u8>) -> UniversalGamepad,
+    pub universal_gamepad_to_usb_output: fn(&UniversalGamepad) -> Vec<u8>,
 }
 
-impl UsbGadgetDescriptor<'_> {
+impl Gamepad {
+    /// Attempts to write the entire `usb_output` into the file /dev/hidg0
+    pub fn write_to_gadget_once(&self, usb_output: Vec<u8>) {
+        let mut hidg0 = match File::options().write(true).append(false).open("/dev/hidg0") {
+            Ok(file) => file,
+            Err(err) => {
+                println!("Could not open file hidg0 {err}");
+                exit(1);
+            }
+        };
+
+        match hidg0.write_all(&usb_output) {
+            Ok(_) => (),
+            Err(err) => println!("write to hidg0 failed: {:?}", err),
+        }
+    }
+
+    pub fn bt_input_to_universal_gamepad(&self, bt_input: Vec<u8>) -> UniversalGamepad {
+        return (self.bt_input_to_universal_gamepad)(bt_input);
+    }
+
+    /// creates a `Vec<u8>` that is the HID Report which has to be written in `/dev/hidg0`
+    /// 
+    /// The length will be asserted at runtime to be `self.gadget.functions_hid.report_length`. This function will **panic** if the length is not correct
+    pub fn universal_gamepad_to_usb_output(&self, gamepad: &UniversalGamepad) -> Vec<u8> {
+        return (self.universal_gamepad_to_usb_output)(gamepad);
+    }
+
     /// Moves all triggers and joysticks and presses and releases all buttons
-    pub fn write_continously_testing(&self) -> ! {
+    pub fn write_dummy_data_continously(&self) -> ! {
         let mut gamepad: UniversalGamepad = UniversalGamepad::nothing_pressed();
 
         const OSCILLATE_UPPER: u8 = 192;
@@ -81,18 +99,30 @@ impl UsbGadgetDescriptor<'_> {
             gamepad.triggers.right = oscillate;
             println!("{oscillate}");
 
-            self.write_output_once(&gamepad, 0, 0);
+            let usb_output = self.universal_gamepad_to_usb_output(&gamepad);
+            self.write_to_gadget_once(usb_output);
 
             // TODO achieve a real timed interval
             thread::sleep(Duration::from_millis(4));
         }
     }
+}
 
-    /// Calls the function pointer `write_output_once` (was provided at instantiation)
-    pub fn write_output_once(&self, gamepad: &UniversalGamepad, counter: u8, seconds: u8) {
-        (self.write_output_once)(gamepad, counter, seconds);
-    }
+pub struct UsbGadgetDescriptor {
+    pub bcd_usb: u16,           // USB HID Specification Release 1.0.                               | 0x200 = 2.00
+    pub b_device_class: u8,     // class code                                                       | 0x00 for HID
+    pub b_device_sub_class: u8, // subclass code                                                    | 0x00 for HID
+    pub b_device_protocol: u8,  // protocol                                                         | 0x00 for HID
+    pub b_max_packet_size0: u8, // Maximum packet size for endpoint zero                            | 8 / 16 / 32 / 64
+    pub id_vendor: u16,         //
+    pub id_product: u16,        //
+    pub bcd_device: u16,        // Device release number (assigned by manufacturer)                 | 0x100 = 1.00
+    pub strings_0x409: UsbGadgetStrings,
+    pub configs_c1: UsbGadgetConfigs,
+    pub functions_hid: UsbGadgetFunctionsHid,
+}
 
+impl UsbGadgetDescriptor {
     /// Using linux' ConfigFS, create the given usb device
     pub fn configure_device(&self) {
         self._create_directories();
@@ -282,16 +312,16 @@ impl UsbGadgetDescriptor<'_> {
     }
 }
 
-pub struct UsbGadgetStrings<'a> {
+pub struct UsbGadgetStrings {
     /// can be empty
-    pub serialnumber: &'a str,
+    pub serialnumber: &'static str,
     /// can be empty
-    pub product: &'a str,
+    pub product: &'static str,
     /// can be empty
-    pub manufacturer: &'a str,
+    pub manufacturer: &'static str,
 }
 
-impl UsbGadgetStrings<'_> {
+impl UsbGadgetStrings {
     /// Writes the contents of each string into the corresponding file, if the string is not empty
     ///
     /// **Exits** as soon as one write operation is not successful
@@ -328,7 +358,7 @@ impl UsbGadgetStrings<'_> {
     }
 }
 
-pub struct UsbGadgetConfigs<'a> {
+pub struct UsbGadgetConfigs {
     /// Left most bit always has to be set or file write is not permitted
     ///
     /// Allowed values are:
@@ -342,10 +372,10 @@ pub struct UsbGadgetConfigs<'a> {
     /// Max value is 500mA, because thats how USB works
     pub max_power: u16,
 
-    pub configs_string: &'a str,
+    pub configs_string: &'static str,
 }
 
-impl UsbGadgetConfigs<'_> {
+impl UsbGadgetConfigs {
     fn write_to_disk(&self) {
         match File::options().write(true).truncate(true).open(&(CONFIGS_DIR.to_string() + "/bmAttributes")) {
             Ok(mut file) => match file.write_all(&self.bm_attributes.to_string().as_bytes()) {

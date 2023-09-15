@@ -17,7 +17,6 @@ pub const GENERIC_KEYBOARD: UsbGadgetDescriptor = UsbGadgetDescriptor {
     id_vendor: 0x1d6b,
     id_product: 0x0104,
     bcd_device: 0x0100,
-    write_output_once: _write_output_once,
     strings_0x409: UsbGadgetStrings {
         manufacturer: "Tobias Girstmair",
         product: "iSticktoit.net USB Device",

@@ -9,7 +9,6 @@ pub const DUALSHOCK: UsbGadgetDescriptor = UsbGadgetDescriptor {
     id_vendor: 0x054c,
     id_product: 0x09cc,
     bcd_device: 0x100,
-    write_output_once: _write_output_once,
     strings_0x409: UsbGadgetStrings {
         serialnumber: "",
         product: "Wireless Controller",

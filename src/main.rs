@@ -30,6 +30,7 @@ mod usb_gamepad_ps5;
 use crate::bluetooth_fn::*;
 use crate::hidapi_fn::{get_hid_gamepad, process_input};
 use crate::universal_gamepad::UniversalGamepad;
+use crate::usb_gadget::Gamepad;
 use crate::usb_gamepad_ps5::DUALSENSE;
 
 //  if working inside a docker container: (started with the docker-compose from project root)
@@ -44,8 +45,14 @@ fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");
 
-    // DUALSENSE.configure_device();
-    DUALSENSE.write_continously_testing();
+    // After Gamepad is connected via BT, the type is known and can be set for the rest of the runtime like this:
+    // let input_gamepad: &Gamepad = &DUALSENSE;
+
+    // TODO output_gamepad should be expected from a command argument or set to a default if not given
+    let output_gamepad: &Gamepad = &DUALSENSE;
+
+    // output_gamepad.gadget.configure_device();
+    output_gamepad.write_dummy_data_continously();
 
     // _read_gamepad_input();
 }
