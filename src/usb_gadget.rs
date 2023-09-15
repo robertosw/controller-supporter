@@ -311,18 +311,18 @@ impl UsbGadgetConfigs {
             Err(_) => print_and_exit!("Could not open file MaxPower", 13),
         }
 
-        // TODO if empty, dont write
-
-        match File::options()
-            .write(true)
-            .truncate(true)
-            .open(&(CONFIGS_DIR.to_string() + "/strings/0x409/configuration"))
-        {
-            Ok(mut file) => match file.write_all(&self.configs_string.as_bytes()) {
-                Ok(_) => (),
-                Err(_) => print_and_exit!("Could not write to file configuration", 12),
-            },
-            Err(_) => print_and_exit!("Could not open file configuration", 13),
+        if self.configs_string.is_empty() == false {
+            match File::options()
+                .write(true)
+                .truncate(true)
+                .open(&(CONFIGS_DIR.to_string() + "/strings/0x409/configuration"))
+            {
+                Ok(mut file) => match file.write_all(&self.configs_string.as_bytes()) {
+                    Ok(_) => (),
+                    Err(_) => print_and_exit!("Could not write to file configuration", 12),
+                },
+                Err(_) => print_and_exit!("Could not open file configuration", 13),
+            }
         }
     }
 }
