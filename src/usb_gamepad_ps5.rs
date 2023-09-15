@@ -1,7 +1,7 @@
-use crate::universal_gamepad::UniversalGamepad;
+use crate::universal_gamepad::*;
 use crate::usb_gadget::*;
-use crate::UsbGadgetDescriptor;
 use crate::usb_gamepad::Gamepad;
+use crate::UsbGadgetDescriptor;
 
 pub const DUALSENSE: Gamepad = Gamepad {
     gadget: UsbGadgetDescriptor {
@@ -196,15 +196,106 @@ pub const DUALSENSE: Gamepad = Gamepad {
             ],
         },
     },
-    bt_input_to_universal_gamepad: _bt_input_to_universal_gamepad_dualsense,
-    universal_gamepad_to_usb_output: _universal_gamepad_to_usb_output_dualsense,
+    min_bt_report_size: 12,
+    bt_input_to_universal_gamepad: _bt_input_to_universal_gamepad,
+    universal_gamepad_to_usb_output: _universal_gamepad_to_usb_output,
 };
 
-fn _bt_input_to_universal_gamepad_dualsense(_bt_input: &Vec<u8>) -> UniversalGamepad {
-    todo!();
+fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
+    let mut output: UniversalGamepad = UniversalGamepad::nothing_pressed();
+    let dpad_byte = 0b00001111 & bt_input[9];
+
+    output.sticks = Sticks {
+        left: Stick {
+            x: bt_input[2],
+            y: bt_input[3],
+            pressed: match bt_input[10] {
+                64 => true,
+                _ => false,
+            },
+        },
+        right: Stick {
+            x: bt_input[4],
+            y: bt_input[5],
+            pressed: match bt_input[10] {
+                128 => true,
+                _ => false,
+            },
+        },
+    };
+    output.triggers = Triggers {
+        left: bt_input[6],
+        right: bt_input[7],
+    };
+    output.buttons.bumpers = Bumpers {
+        left: match bt_input[10] {
+            1 => true,
+            _ => false,
+        },
+        right: match bt_input[10] {
+            2 => true,
+            _ => false,
+        },
+    };
+    output.buttons.main = MainButtons {
+        upper: (bt_input[9] & 0b10000000 != 0),
+        right: (bt_input[9] & 0b01000000 != 0),
+        lower: (bt_input[9] & 0b00100000 != 0),
+        left: (bt_input[9] & 0b00010000 != 0),
+    };
+    output.buttons.dpad = DPad {
+        right: (dpad_byte == 1 || dpad_byte == 2 || dpad_byte == 3),
+        down: (dpad_byte == 3 || dpad_byte == 4 || dpad_byte == 5),
+        left: (dpad_byte == 5 || dpad_byte == 6 || dpad_byte == 7),
+        up: (dpad_byte == 0 || dpad_byte == 1 || dpad_byte == 7),
+    };
+    output.buttons.specials = SpecialButtons {
+        right: match bt_input[10] {
+            32 => true,
+            _ => false,
+        },
+        left: match bt_input[10] {
+            16 => true,
+            _ => false,
+        },
+        logo: match bt_input[11] {
+            1 => true,
+            _ => false,
+        },
+    };
+    output.other.touchpad = Some(Touchpad {
+        x_coord: 0,
+        y_coord: 0,
+        touched: false,
+        pressed: match bt_input[11] {
+            2 => true,
+            _ => false,
+        },
+    });
+
+    DUALSENSE.debug_output_bt_input(&output);
+
+    return output;
+
+    // maybe bytes 35 and 36 together are left-right
+
+    // print!("{}", termion::cursor::Goto(1, 1));
+
+    // let combined_u16: u16 = (input[35] as u16) << 8 | (input[36] as u16);
+
+    // adjust which bytes should be visible. For PS Gamepads the first two bytes are just counters
+    // print!("{:05}\t", combined_u16);
+
+    // TODO Touchpad Support
+    // when Byte 34 changes, the touchpad state changed (either now touched or now not touched)
+    //  also this counts up each time the state changes
+    // Touchpad Y Axis is byte 37
+    // Touchpad X Axis is strange, (byte 35 or 36) probably consists of multiple bytes
+    //   if only touched, the value is somewhat correct (0 is left, 255 is right)
+    //   if you drag the finger across, this value overflows 4x on the whole way (l->r)
 }
 
-fn _universal_gamepad_to_usb_output_dualsense(gamepad: &UniversalGamepad) -> Vec<u8> {
+fn _universal_gamepad_to_usb_output(gamepad: &UniversalGamepad) -> Vec<u8> {
     let out: Vec<u8> = vec![
         0x01,
         gamepad.sticks.left.x,
