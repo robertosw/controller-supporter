@@ -1,8 +1,12 @@
 use ::hidapi::{BusType, HidApi};
 use hidapi::{DeviceInfo, HidDevice};
+use std::{process::exit, thread, time::Duration};
 
-use crate::{universal_gamepad::*, HID_ARRAY_SIZE};
+use crate::{universal_gamepad::*, usb_gadget::Gamepad};
 
+const HID_ARRAY_SIZE: usize = 64;
+
+#[derive(Debug)]
 pub enum HidApiGamepadError {
     NoBTDevice,
     NoSupportedDevice,
@@ -93,8 +97,55 @@ fn _get_bluetooth_hid_devices(api: &HidApi) -> Result<Vec<&DeviceInfo>, ()> {
     return Ok(bluetooth_devices);
 }
 
+pub fn read_gamepad_input(input_gamepad: &Gamepad) -> ! {
+    let api = match HidApi::new() {
+        Ok(api) => api,
+        Err(err) => {
+            println!("Error getting HidApi access: {:?}", err);
+            exit(2);
+        }
+    };
+
+    let (device, model) = match get_hid_gamepad(&api) {
+        Ok(val) => val,
+        Err(_) => exit(1),
+    };
+
+    // --- Read from device --- //
+
+    // if false, calls to read may return nothing, but also dont block
+    match device.set_blocking_mode(false) {
+        Ok(_) => (),
+        Err(err) => panic!("HidError: {:?}", err),
+    };
+
+    let mut input_buf = [0 as u8; HID_ARRAY_SIZE];
+    let mut output_gamepad: UniversalGamepad = UniversalGamepad::nothing_pressed();
+
+    print!("{}", termion::clear::All);
+
+    loop {
+        // setting -1 as timeout means waiting for the next input event, in this mode valid_bytes_count == HID_ARRAY_SIZE
+        // setting 0ms as timeout, probably means sometimes the previous input event is taken, but the execution time of this whole block is 100x faster!
+        // also: reading in blocking mode might be problematic if the gamepad is disconnected => infinite wait
+        let _valid_bytes_count: usize = match device.read_timeout(&mut input_buf[..], 0) {
+            Ok(value) => {
+                if value != HID_ARRAY_SIZE {
+                    continue;
+                } else {
+                    _process_input(input_buf, &model, &mut output_gamepad);
+                    value
+                }
+            }
+            Err(_) => continue,
+        };
+
+        thread::sleep(Duration::from_micros(1500)); // <= 1500 is fine for now delay
+    }
+}
+
 /// Expects the input array to be output from hidapi
-pub fn process_input(input: [u8; HID_ARRAY_SIZE], model: &GamepadModel, output: &mut UniversalGamepad) {
+fn _process_input(input: [u8; HID_ARRAY_SIZE], model: &GamepadModel, output: &mut UniversalGamepad) {
     match model {
         GamepadModel::PS5 => {
             _process_input_ps5(input, output);

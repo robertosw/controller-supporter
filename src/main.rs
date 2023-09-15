@@ -28,9 +28,10 @@ mod usb_gamepad_ps4;
 mod usb_gamepad_ps5;
 
 use crate::bluetooth_fn::*;
-use crate::hidapi_fn::{get_hid_gamepad, process_input};
-use crate::universal_gamepad::UniversalGamepad;
+use crate::hidapi_fn::get_hid_gamepad;
+use crate::hidapi_fn::read_gamepad_input;
 use crate::usb_gadget::Gamepad;
+use crate::usb_gamepad_ps4::DUALSHOCK;
 use crate::usb_gamepad_ps5::DUALSENSE;
 
 //  if working inside a docker container: (started with the docker-compose from project root)
@@ -39,68 +40,37 @@ use crate::usb_gamepad_ps5::DUALSENSE;
 //  if working on native os as non root: (from /gamepad-bridge)
 //  - build & run   `cargo build --release && sudo chown root:root target/release/gamepad-bridge && sudo chmod +s target/release/gamepad-bridge && /target/release/gamepad-bridge`
 
-pub const HID_ARRAY_SIZE: usize = 75;
 
 fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");
 
-    // After Gamepad is connected via BT, the type is known and can be set for the rest of the runtime like this:
-    // let input_gamepad: &Gamepad = &DUALSENSE;
+    // BT connection here
 
+    // What gamepad is connected?
+    let api = match HidApi::new() {
+        Ok(api) => api,
+        Err(err) => print_error_and_exit!("Error getting HidApi access", err, 2),
+    };
+    
+    let (device, input_gamepad): (hidapi::HidDevice, &Gamepad) = match get_hid_gamepad(&api) {
+        Ok((device, model)) => match model {
+            hidapi_fn::GamepadModel::PS5 => (device, &DUALSENSE),
+            hidapi_fn::GamepadModel::PS4 => (device, &DUALSHOCK),
+        },
+        Err(err) => print_error_and_exit!("Error accessing connected hid gamepad", err, 1),
+    };
+    
+    // Reading input of BT gamepad
+    
+    
     // TODO output_gamepad should be expected from a command argument or set to a default if not given
     let output_gamepad: &Gamepad = &DUALSENSE;
 
     // output_gamepad.gadget.configure_device();
     output_gamepad.write_dummy_data_continously();
 
-    // _read_gamepad_input();
-}
-
-fn _read_gamepad_input() -> ! {
-    let api = match HidApi::new() {
-        Ok(api) => api,
-        Err(err) => {
-            println!("Error getting HidApi access: {:?}", err);
-            exit(2);
-        }
-    };
-
-    let (device, model) = match get_hid_gamepad(&api) {
-        Ok(val) => val,
-        Err(_) => exit(1),
-    };
-
-    // --- Read from device --- //
-
-    // if false, calls to read may return nothing, but also dont block
-    match device.set_blocking_mode(false) {
-        Ok(_) => (),
-        Err(err) => panic!("HidError: {:?}", err),
-    };
-    let mut input_buf = [0 as u8; HID_ARRAY_SIZE];
-    let mut output_gamepad: UniversalGamepad = UniversalGamepad::nothing_pressed();
-
-    print!("{}", termion::clear::All);
-
-    loop {
-        // setting -1 as timeout means waiting for the next input event, in this mode valid_bytes_count == HID_ARRAY_SIZE
-        // setting 0ms as timeout, probably means sometimes the previous input event is taken, but the execution time of this whole block is 100x faster!
-        // also: reading in blocking mode might be problematic if the gamepad is disconnected => infinite wait
-        let _valid_bytes_count: usize = match device.read_timeout(&mut input_buf[..], 0) {
-            Ok(value) => {
-                if value != HID_ARRAY_SIZE {
-                    continue;
-                } else {
-                    process_input(input_buf, &model, &mut output_gamepad);
-                    value
-                }
-            }
-            Err(_) => continue,
-        };
-
-        thread::sleep(Duration::from_micros(1500)); // <= 1500 is fine for now delay
-    }
+    read_gamepad_input(input_gamepad);
 }
 
 // TODO Check if hidg0 device exists

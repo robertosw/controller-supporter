@@ -1,9 +1,36 @@
-use std::process::{exit, Command};
+use std::process::Command;
 
-/// Print the given `msg` onto terminal output and exit with given `exit_code`
-pub fn print_and_exit(msg: &str, exit_code: i32) -> ! {
-    println!("{msg}");
-    exit(exit_code);
+/// Input values:
+/// 1. Message
+/// 2. Exit code (i32)
+///
+/// Print the given message onto terminal output and exit with the given exit code
+///
+/// Like this: `print_and_exit!("This failed", 1)`
+#[macro_export]
+macro_rules! print_and_exit {
+    ($msg: expr, $code: expr) => {{
+        let code: i32 = $code;
+        println!("{:#?}", $msg);
+        exit(code);
+    }};
+}
+
+/// Input values:
+/// 1. Message
+/// 2. Error
+/// 3. Exit code (i32)
+///
+/// Print the given message and error onto terminal output and exit with the given exit code
+///
+/// Like this: `print_and_exit!("This failed", io::Error, 1)`
+#[macro_export]
+macro_rules! print_error_and_exit {
+    ($msg: expr, $err: expr, $code: expr) => {{
+        let code: i32 = $code;
+        println!("{:#?} {:#?}", $msg, $err);
+        exit(code);
+    }};
 }
 
 /// always runs command as sudo
