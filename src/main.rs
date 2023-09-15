@@ -51,7 +51,7 @@ fn main() {
     // If this is done later, the host might run into errors when trying to classify this device and turn it off
     // TODO output_gamepad should be expected from a command argument or set to a default if not given
 
-    single_thread_interval(Duration::from_micros(1000));
+    single_thread_interval_benchmarked(Duration::from_micros(500));
 
     exit(0);
 
@@ -96,7 +96,18 @@ fn main() {
     thread_handle_write_output.join().unwrap();
 }
 
-fn single_thread_interval(interval: Duration) {
+/// Tested values:
+/// - Interval: 1000 µs
+/// - Rounds: 10 000x
+/// - Code max "runtime": 500 µs = interval / 2   <br>
+/// (its not actually running, just sleeping)
+///
+/// Results:
+/// - Code ran 9 996x out of 10 000x
+/// - Average deviation from interval is 18ns
+fn single_thread_interval_benchmarked(interval: Duration) {
+    // TODO transform this into a macro?
+
     // its safe to use u128 for nanoseconds
     // 2^64 ns are ~580 years
     // so 2^128 are 580² years
@@ -108,11 +119,11 @@ fn single_thread_interval(interval: Duration) {
 
     let mut diffs: Vec<Duration> = Vec::new();
 
-    const ROUNDS: u128 = 10000;
+    const ROUNDS: u128 = 20000;
 
     let mut code_counter = 0;
 
-    // replace with loop later
+    // TODO replace with loop later
     while interval_counts_before < ROUNDS {
         // First run the code, which might take longer than the given interval
         // in which case this loops waits for the next interval
@@ -120,7 +131,7 @@ fn single_thread_interval(interval: Duration) {
             if code_ran == false {
                 // program code that should be run once per cycle here
 
-                random_wait(Duration::from_micros(100), Duration::from_micros(500));
+                random_wait(Duration::from_micros(250), Duration::from_micros(450));
                 code_counter += 1;
             }
             code_ran = true;
@@ -134,7 +145,7 @@ fn single_thread_interval(interval: Duration) {
         let diff_from_interval_ns: u128 = elapsed_ns % interval_ns;
 
         let is_next_interval: bool = interval_counts_now > interval_counts_before;
-        let is_close_enough: bool = (diff_from_interval_ns as f32 / interval_ns as f32) <= 0.05;
+        let is_close_enough: bool = (diff_from_interval_ns as f32 / interval_ns as f32) <= 0.01;
 
         if is_next_interval && is_close_enough {
             let expected: Instant = start + (interval * interval_counts_now as u32);
@@ -163,7 +174,7 @@ fn single_thread_interval(interval: Duration) {
     println!("");
     println!("Code ran {}x, target was {}x", code_counter, ROUNDS);
     println!("Avg ABS  {} ns", avg_ns / ROUNDS);
-    println!("Avg PERC {:2.1?} %", avg_perc / ROUNDS as f64);
+    println!("Avg PERC {:2.3?} %", avg_perc / ROUNDS as f64);
 }
 
 fn random_wait(min: Duration, max: Duration) {
