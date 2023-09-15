@@ -11,19 +11,20 @@ use crate::{print_error_and_exit, universal_gamepad::UniversalGamepad, usb_gadge
 
 pub struct Gamepad {
     pub gadget: UsbGadgetDescriptor,
+
+    /// This depends on how the function bt_input_to_universal_gamepad() works
+    pub min_bt_report_size: usize,
     pub bt_input_to_universal_gamepad: fn(&Vec<u8>) -> UniversalGamepad,
     pub universal_gamepad_to_usb_output: fn(&UniversalGamepad) -> Vec<u8>,
 }
 impl Gamepad {
     pub fn bt_input_to_universal_gamepad(&self, bt_input: &Vec<u8>) -> UniversalGamepad {
-        println!("bt_input_to_universal_gamepad");
         return (self.bt_input_to_universal_gamepad)(&bt_input);
     }
 
     /// - Transforms the given `UniversalGamepad` into the correct output array for this `Gamepad`
     /// - Attempts to write the entire output array into the file /dev/hidg0
     pub fn write_to_gadget_continously(&self, universal_gamepad: Arc<Mutex<UniversalGamepad>>) -> ! {
-        println!("write_to_gadget_continously");
         loop {
             let usb_output: Vec<u8> = {
                 let gamepad_locked = universal_gamepad.lock().expect("Locking Arc<Mutex<UniversalGamepad>> failed!");
@@ -45,11 +46,10 @@ impl Gamepad {
     }
 
     pub fn debug_output_bt_input(&self, gamepad: &UniversalGamepad) {
-        println!("debug_output_bt_input");
-
+        print!("{}", termion::clear::All);
         print!("{}", termion::cursor::Goto(1, 1));
         println!(
-            "Lx:{:?}\tLy:{:?}\tL :{:?}\tRx:{:?}\tRy:{:?}\tR :{:?}\t",
+            "Lx:{:5?}\tLy:{:5?}\tL: {:5?}\tRx:{:5?}\tRy:{:5?}\tR: {:5?}",
             gamepad.sticks.left.x,
             gamepad.sticks.left.y,
             gamepad.sticks.left.pressed,
@@ -60,26 +60,27 @@ impl Gamepad {
 
         print!("{}", termion::cursor::Goto(1, 2));
         println!(
-            "Tl:{:?}\tTr:{:?}\tBl:{:?}\tBr:{:?}\t",
+            "Tl:{:5?}\tTr:{:5?}\tBl:{:?}\tBr:{:?}",
             gamepad.triggers.left, gamepad.triggers.right, gamepad.buttons.bumpers.left, gamepad.buttons.bumpers.right,
         );
 
         print!("{}", termion::cursor::Goto(1, 3));
-        print!("X:{:?}\t", gamepad.buttons.main.lower);
-        print!("O:{:?}\t", gamepad.buttons.main.right);
-        print!("□:{:?}\t", gamepad.buttons.main.left);
-        print!("∆:{:?}\t", gamepad.buttons.main.upper);
+        println!(
+            "X: {:5?}\tO: {:5?}\t□: {:5?}\t∆: {:5?}",
+            gamepad.buttons.main.lower, gamepad.buttons.main.right, gamepad.buttons.main.left, gamepad.buttons.main.upper
+        );
 
         print!("{}", termion::cursor::Goto(1, 4));
-        print!("↑:{:?}\t", gamepad.buttons.dpad.up);
-        print!("→:{:?}\t", gamepad.buttons.dpad.right);
-        print!("↓:{:?}\t", gamepad.buttons.dpad.down);
-        print!("←:{:?}\t", gamepad.buttons.dpad.left);
+        println!(
+            "↑: {:5?}\t→: {:5?}\t↓: {:5?}\t←: {:5?}",
+            gamepad.buttons.dpad.up, gamepad.buttons.dpad.right, gamepad.buttons.dpad.down, gamepad.buttons.dpad.left
+        );
 
         print!("{}", termion::cursor::Goto(1, 5));
-        print!("Special R: {:?}\t", gamepad.buttons.specials.right);
-        print!("Special L: {:?}\t", gamepad.buttons.specials.left);
-        print!("Logo: {:?}\t", gamepad.buttons.specials.logo);
+        println!(
+            "S: {:5?}\tM: {:5?}\tLogo: {:5?}",
+            gamepad.buttons.specials.left, gamepad.buttons.specials.right, gamepad.buttons.specials.logo
+        );
     }
 
     /// creates a `Vec<u8>` that is the HID Report which has to be written in `/dev/hidg0`

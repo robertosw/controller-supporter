@@ -280,12 +280,16 @@ pub const DUALSHOCK: Gamepad = Gamepad {
             ],
         },
     },
+    min_bt_report_size: 20,
     bt_input_to_universal_gamepad: _bt_input_to_universal_gamepad_dualsense,
     universal_gamepad_to_usb_output: _universal_gamepad_to_usb_output_dualsense,
 };
 
 fn _bt_input_to_universal_gamepad_dualsense(_bt_input: &Vec<u8>) -> UniversalGamepad {
+
     todo!();
+
+    // TODO set min_bt_report_size correctly
 }
 
 fn _universal_gamepad_to_usb_output_dualsense(_gamepad: &UniversalGamepad) -> Vec<u8> {

@@ -123,10 +123,7 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, univers
         Err(err) => panic!("HidError: {:?}", err),
     };
 
-    // This is from PS5 Dual Sense controller, read out with terminal tool hid-recorder (hid-tools)
-    // TODO Read this out dynamically
-    let min_report_size: usize = 16;
-
+    let min_size: usize = input_gamepad.min_bt_report_size;
     let mut buf: [u8; 100] = [0 as u8; 100];
 
     loop {
@@ -134,7 +131,7 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, univers
         // setting 0ms as timeout, probably means sometimes the previous input event is taken, but the execution time of this whole block is 100x faster!
         // also: reading in blocking mode might be problematic if the gamepad is disconnected => infinite wait
         match device.read_timeout(&mut buf[..], 0) {
-            Ok(value) => match value.cmp(&min_report_size) {
+            Ok(value) => match value.cmp(&min_size) {
                 std::cmp::Ordering::Greater => {
                     let mut gamepad_locked = universal_gamepad.lock().expect("Locking Arc<Mutex<UniversalGamepad>> failed!");
                     *gamepad_locked = input_gamepad.bt_input_to_universal_gamepad(&buf.to_vec());

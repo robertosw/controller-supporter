@@ -196,13 +196,12 @@ pub const DUALSENSE: Gamepad = Gamepad {
             ],
         },
     },
-    bt_input_to_universal_gamepad: _bt_input_to_universal_gamepad_dualsense,
-    universal_gamepad_to_usb_output: _universal_gamepad_to_usb_output_dualsense,
+    min_bt_report_size: 12,
+    bt_input_to_universal_gamepad: _bt_input_to_universal_gamepad,
+    universal_gamepad_to_usb_output: _universal_gamepad_to_usb_output,
 };
 
-fn _bt_input_to_universal_gamepad_dualsense(bt_input: &Vec<u8>) -> UniversalGamepad {
-    println!("_bt_input_to_universal_gamepad_dualsense");
-
+fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
     let mut output: UniversalGamepad = UniversalGamepad::nothing_pressed();
     let dpad_byte = 0b00001111 & bt_input[9];
 
@@ -296,8 +295,7 @@ fn _bt_input_to_universal_gamepad_dualsense(bt_input: &Vec<u8>) -> UniversalGame
     //   if you drag the finger across, this value overflows 4x on the whole way (l->r)
 }
 
-fn _universal_gamepad_to_usb_output_dualsense(gamepad: &UniversalGamepad) -> Vec<u8> {
-    println!("_universal_gamepad_to_usb_output_dualsense");
+fn _universal_gamepad_to_usb_output(gamepad: &UniversalGamepad) -> Vec<u8> {
     let out: Vec<u8> = vec![
         0x01,
         gamepad.sticks.left.x,

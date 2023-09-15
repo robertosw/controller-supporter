@@ -84,6 +84,7 @@ fn main() {
 
     // ----- Clean up (if Ctrl + C is pressed)
     // TODO move CTRL + C handling from BT to here
+    // TODO undo gadget config completely, so that this program can be rerun without errors from configure_device()
     thread_handle_read_input.join().unwrap();
     thread_handle_write_output.join().unwrap();
 }
