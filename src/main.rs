@@ -47,6 +47,12 @@ fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");
 
+    // ----- Enable Gadget
+    // If this is done later, the host might run into errors when trying to classify this device and turn it off
+    // TODO output_gamepad should be expected from a command argument or set to a default if not given
+    let output_gamepad: &Gamepad = &DUALSENSE;
+    output_gamepad.gadget.configure_device();
+
     // ----- BT connection here
 
     // ----- What gamepad is connected?
@@ -64,18 +70,14 @@ fn main() {
     };
 
     // ----- Reading input of BT gamepad
-
     let universal_gamepad: Arc<Mutex<UniversalGamepad>> = Arc::new(Mutex::new(UniversalGamepad::nothing_pressed()));
-    let universal_gamepad_clone = universal_gamepad.clone();
-    let thread_handle_read_input = thread::spawn(move || read_bt_gamepad_input(device, input_gamepad, universal_gamepad_clone));
+    let thread_handle_read_input = thread::spawn(move || read_bt_gamepad_input(device, input_gamepad, universal_gamepad.clone()));
 
     // ----- Write Output to gadget
-
-    // TODO output_gamepad should be expected from a command argument or set to a default if not given
-    let output_gamepad: &Gamepad = &DUALSENSE;
-
-    output_gamepad.gadget.configure_device();
-
+    
+    
+    // ----- Clean up (if Ctrl + C is pressed)
+    // TODO move CTRL + C handling from BT to here
     thread_handle_read_input.join().unwrap();
 }
 

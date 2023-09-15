@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    universal_gamepad::{self, Bumpers, DPad, MainButtons, SpecialButtons, Stick, Sticks, Touchpad, Triggers, UniversalGamepad},
+    universal_gamepad::{Bumpers, DPad, MainButtons, SpecialButtons, Stick, Sticks, Touchpad, Triggers, UniversalGamepad},
     usb_gamepad::Gamepad,
 };
 
@@ -23,6 +23,24 @@ pub enum HidApiGamepadError {
 pub enum GamepadModel {
     PS5,
     PS4,
+}
+
+// TODO Use for first manual debugging / interpreting of new gamepads
+pub fn read_unknown_usb_input() {
+    // _process_input_unknown()
+}
+
+
+fn _process_input_unknown(input: [u8; HID_ARRAY_SIZE]) {
+    print!("{}", termion::cursor::Goto(1, 1));
+
+    // adjust which bytes should be visible. For PS Gamepads the first two bytes are just counters
+    let mut i: usize = 0;
+
+    for byte in input[i..].iter() {
+        print!("{}|{:03}\t", i, byte);
+        i += 1;
+    }
 }
 
 /// Checks for connected HID Devices, tries to find a supported one
@@ -134,18 +152,6 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, univers
     }
 }
 
-/// Expects the input array to be output from hidapi
-fn _process_input(input: [u8; HID_ARRAY_SIZE], model: &GamepadModel, output: &mut UniversalGamepad) {
-    // TODO This function has to be part of each Gamepad instance
-    match model {
-        GamepadModel::PS5 => {
-            _process_input_ps5(input, output);
-            _output_gamepad_btns(output);
-        }
-        GamepadModel::PS4 => _process_input_unknown(input),
-    }
-}
-
 fn _output_gamepad_btns(output: &mut UniversalGamepad) {
     print!("{}", termion::clear::All);
     println!("Lx: {:?}", output.sticks.left.x);
@@ -176,17 +182,6 @@ fn _output_gamepad_btns(output: &mut UniversalGamepad) {
     println!("Logo: {:?}", output.buttons.specials.logo);
 }
 
-fn _process_input_unknown(input: [u8; HID_ARRAY_SIZE]) {
-    print!("{}", termion::cursor::Goto(1, 1));
-
-    // adjust which bytes should be visible. For PS Gamepads the first two bytes are just counters
-    let mut i: usize = 0;
-
-    for byte in input[i..].iter() {
-        print!("{}|{:03}\t", i, byte);
-        i += 1;
-    }
-}
 
 fn _process_input_ps5(input: [u8; HID_ARRAY_SIZE], output: &mut UniversalGamepad) {
     let dpad = 0b00001111 & input[9];
