@@ -30,8 +30,6 @@ mod usb_gamepad_ps4;
 mod usb_gamepad_ps5;
 
 use crate::bluetooth_fn::*;
-use crate::hidapi_fn::get_hid_gamepad;
-use crate::hidapi_fn::read_bt_gamepad_input;
 use crate::universal_gamepad::UniversalGamepad;
 use crate::usb_gamepad::Gamepad;
 use crate::usb_gamepad_ps4::DUALSHOCK;
@@ -51,7 +49,7 @@ fn main() {
     // If this is done later, the host might run into errors when trying to classify this device and turn it off
     // TODO output_gamepad should be expected from a command argument or set to a default if not given
     let output_gamepad: &Gamepad = &DUALSENSE;
-    output_gamepad.gadget.configure_device();
+    // output_gamepad.gadget.configure_device();
 
     // ----- BT connection here
 
@@ -61,7 +59,7 @@ fn main() {
         Err(err) => print_error_and_exit!("Error getting HidApi access", err, 2),
     };
 
-    let (device, input_gamepad): (hidapi::HidDevice, &Gamepad) = match get_hid_gamepad(&api) {
+    let (device, input_gamepad): (hidapi::HidDevice, &Gamepad) = match hidapi_fn::get_hid_gamepad(&api) {
         Ok((device, model)) => match model {
             hidapi_fn::GamepadModel::PS5 => (device, &DUALSENSE),
             hidapi_fn::GamepadModel::PS4 => (device, &DUALSHOCK),
@@ -69,16 +67,25 @@ fn main() {
         Err(err) => print_error_and_exit!("Error accessing connected hid gamepad", err, 1),
     };
 
+    println!("Gamepad connected");
+
     // ----- Reading input of BT gamepad
     let universal_gamepad: Arc<Mutex<UniversalGamepad>> = Arc::new(Mutex::new(UniversalGamepad::nothing_pressed()));
-    let thread_handle_read_input = thread::spawn(move || read_bt_gamepad_input(device, input_gamepad, universal_gamepad.clone()));
+    let gamepad_clone = universal_gamepad.clone(); // Cloning has to be done outside of the closure
+    let thread_handle_read_input = thread::spawn(move || hidapi_fn::read_bt_gamepad_input(device, input_gamepad, gamepad_clone));
+
+    // Maybe remove this later, but currently this the output-writing step is reached so fast that /dev/hidg0 is not yet ready.
+    // This just prevents some of the "Cannot send after transport endpoint shutdown" errors because of this ^
+    thread::sleep(Duration::from_secs(1));
 
     // ----- Write Output to gadget
-    
-    
+    let gamepad_clone = universal_gamepad.clone();
+    let thread_handle_write_output = thread::spawn(move || output_gamepad.write_to_gadget_continously(gamepad_clone));
+
     // ----- Clean up (if Ctrl + C is pressed)
     // TODO move CTRL + C handling from BT to here
     thread_handle_read_input.join().unwrap();
+    thread_handle_write_output.join().unwrap();
 }
 
 // Ideas for program flow
