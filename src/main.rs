@@ -9,8 +9,6 @@ extern crate termion;
 use ctrlc::set_handler;
 use hidapi::HidApi;
 use std::env;
-use std::fs::File;
-use std::io::Write;
 use std::process::exit;
 use std::process::Command;
 use std::sync::atomic::AtomicBool;
@@ -46,10 +44,8 @@ fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");
 
-    DUALSENSE.configure_device();
-    DUALSENSE.write_output_once(&UniversalGamepad::nothing_pressed(), 0, 0);
-
-    exit(0);
+    // DUALSENSE.configure_device();
+    DUALSENSE.write_continously_testing();
 
     // _read_gamepad_input();
 }

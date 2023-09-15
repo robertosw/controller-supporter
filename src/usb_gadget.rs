@@ -14,6 +14,8 @@ use std::{
     fs::{self, File},
     io::Write,
     process::exit,
+    thread,
+    time::Duration,
 };
 
 use crate::{
@@ -42,6 +44,50 @@ pub struct UsbGadgetDescriptor<'a> {
 }
 
 impl UsbGadgetDescriptor<'_> {
+    /// Moves all triggers and joysticks and presses and releases all buttons
+    pub fn write_continously_testing(&self) -> ! {
+        let mut gamepad: UniversalGamepad = UniversalGamepad::nothing_pressed();
+
+        const OSCILLATE_UPPER: u8 = 192;
+        const OSCILLATE_LOWER: u8 = 64;
+        let mut oscillate: u8 = OSCILLATE_LOWER;
+        let mut up: bool = true;
+
+        // println!("sleeping 10s");
+        // thread::sleep(Duration::from_secs(10));
+        println!("lets go");
+
+        loop {
+            // This counts one byte at a time from OSCILLATE_LOWER to OSCILLATE_UPPER and back to OSCILLATE_LOWER
+
+            match oscillate {
+                OSCILLATE_LOWER => up = true,
+                OSCILLATE_UPPER => up = false,
+                _ => (),
+            }
+
+            if up && (oscillate < OSCILLATE_UPPER) {
+                oscillate += 1;
+            }
+            if !up && (oscillate > OSCILLATE_LOWER) {
+                oscillate -= 1;
+            }
+
+            gamepad.sticks.left.x = oscillate;
+            gamepad.sticks.left.y = oscillate;
+            gamepad.sticks.right.x = oscillate;
+            gamepad.sticks.right.y = oscillate;
+            gamepad.triggers.left = oscillate;
+            gamepad.triggers.right = oscillate;
+            println!("{oscillate}");
+
+            self.write_output_once(&gamepad, 0, 0);
+
+            // TODO achieve a real timed interval
+            thread::sleep(Duration::from_millis(4));
+        }
+    }
+
     /// Calls the function pointer `write_output_once` (was provided at instantiation)
     pub fn write_output_once(&self, gamepad: &UniversalGamepad, counter: u8, seconds: u8) {
         (self.write_output_once)(gamepad, counter, seconds);
