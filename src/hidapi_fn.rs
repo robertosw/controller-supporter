@@ -123,14 +123,9 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, univers
         Err(err) => panic!("HidError: {:?}", err),
     };
 
-    // This comes from the bt_input_to_universal_gamepad functions..
-    // this solution isnt really nice, see below for improvement
-    let min_report_size: usize = 16;
-
     // This is from PS5 Dual Sense controller, read out with terminal tool hid-recorder (hid-tools)
     // TODO Read this out dynamically
-    // let expected_report_size = 78;
-    // let mut bt_input: Vec<u8> = Vec::with_capacity(expected_report_size);
+    let min_report_size: usize = 16;
 
     let mut buf: [u8; 100] = [0 as u8; 100];
 
@@ -139,19 +134,13 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, univers
         // setting 0ms as timeout, probably means sometimes the previous input event is taken, but the execution time of this whole block is 100x faster!
         // also: reading in blocking mode might be problematic if the gamepad is disconnected => infinite wait
         match device.read_timeout(&mut buf[..], 0) {
-            Ok(value) => {
-                if value > min_report_size {
-                    println!("read_timeout ok");
-                    {
-                        let mut gamepad_locked = universal_gamepad.lock().expect("Locking Arc<Mutex<UniversalGamepad>> failed!");
-                        let vec_buf = buf.to_vec();
-                        *gamepad_locked = input_gamepad.bt_input_to_universal_gamepad(&vec_buf);
-                    }
-                } else {
-                    print!(".");
-                    continue;
+            Ok(value) => match value.cmp(&min_report_size) {
+                std::cmp::Ordering::Greater => {
+                    let mut gamepad_locked = universal_gamepad.lock().expect("Locking Arc<Mutex<UniversalGamepad>> failed!");
+                    *gamepad_locked = input_gamepad.bt_input_to_universal_gamepad(&buf.to_vec());
                 }
-            }
+                _ => continue,
+            },
             Err(e) => {
                 println!("read_timeout error: {e}");
                 continue;
