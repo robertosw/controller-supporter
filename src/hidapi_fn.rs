@@ -1,13 +1,12 @@
-use ::hidapi::{BusType, HidApi};
-use hidapi::{DeviceInfo, HidDevice};
-use std::{
-    sync::{
-        mpsc::{Receiver, TryRecvError},
-        Arc, Mutex,
-    },
-    thread,
-    time::Duration,
-};
+use ::hidapi::BusType;
+use ::hidapi::HidApi;
+use flume::Receiver;
+use flume::Sender;
+use flume::TryRecvError;
+use hidapi::DeviceInfo;
+use hidapi::HidDevice;
+use std::thread;
+use std::time::Duration;
 
 use crate::{universal_gamepad::UniversalGamepad, usb_gamepad::Gamepad};
 
@@ -119,9 +118,9 @@ fn _get_bluetooth_hid_devices(api: &HidApi) -> Result<Vec<&DeviceInfo>, ()> {
     return Ok(bluetooth_devices);
 }
 
-pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, universal_gamepad: Arc<Mutex<UniversalGamepad>>, recv: Receiver<bool>) {
+pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, sender: Sender<UniversalGamepad>, receiver_exit_request: Receiver<()>) {
     // if set to false, calls to read may return nothing, but also dont block
-    match device.set_blocking_mode(false) {
+    match device.set_blocking_mode(true) {
         Ok(_) => (),
         Err(err) => panic!("HidError: {:?}", err),
     };
@@ -130,19 +129,26 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, univers
     let mut buf: [u8; 100] = [0 as u8; 100];
 
     loop {
-        match recv.try_recv() {
-            Ok(_) | Err(TryRecvError::Disconnected) => break,
+        // did the main thread request that this thread stops?
+        match receiver_exit_request.try_recv() {
+            Ok(_) | Err(TryRecvError::Disconnected) => {
+                sender.downgrade();
+                break;
+            }
             Err(TryRecvError::Empty) => (),
         }
 
         // setting -1 as timeout means waiting for the next input event, in this mode valid_bytes_count == HID_ARRAY_SIZE
         // setting 0ms as timeout, probably means sometimes the previous input event is taken, but the execution time of this whole block is 100x faster!
         // also: reading in blocking mode might be problematic if the gamepad is disconnected => infinite wait
-        match device.read_timeout(&mut buf[..], 0) {
+        match device.read_timeout(&mut buf[..], -1) {
             Ok(value) => match value.cmp(&min_size) {
                 std::cmp::Ordering::Greater => {
-                    let mut gamepad_locked = universal_gamepad.lock().expect("Locking Arc<Mutex<UniversalGamepad>> failed!");
-                    *gamepad_locked = input_gamepad.bt_input_to_universal_gamepad(&buf.to_vec());
+                    let gamepad = input_gamepad.bt_input_to_universal_gamepad(&buf.to_vec());
+                    match sender.send(gamepad) {
+                        Ok(_) => {}
+                        Err(err) => println!("Error sending gamepad to output thread: {err}"),
+                    };
                 }
                 _ => continue,
             },
@@ -152,7 +158,7 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, univers
             }
         };
 
-        // TODO can this be changed to wait for inputs?
-        thread::sleep(Duration::from_micros(100));
+        // The message sending to the other thread + evaluation time is sometimes above 100µs
+        thread::sleep(Duration::from_micros(200));
     }
 }

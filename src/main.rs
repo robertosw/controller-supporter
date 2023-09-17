@@ -7,17 +7,18 @@ extern crate version;
 extern crate termion;
 
 use ctrlc::set_handler;
+use flume::bounded;
+use flume::unbounded;
+use flume::Receiver;
+use flume::Sender;
 use hidapi::HidApi;
 use std::env;
 use std::process::exit;
 use std::process::Command;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::mpsc::channel;
-use std::sync::mpsc::Receiver;
-use std::sync::mpsc::Sender;
+use std::sync::mpsc;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 use usb_gadget::UsbGadgetDescriptor;
@@ -44,12 +45,6 @@ use crate::usb_gamepad_ps5::DUALSENSE;
 //  if working on native os as non root: (from /gamepad-bridge)
 //  - build & run   `cargo build --release && sudo chown root:root target/release/gamepad-bridge && sudo chmod +s target/release/gamepad-bridge && /target/release/gamepad-bridge`
 
-/* TODO
-   The input and output thread are taking up nearly 100% cpu all the time
-   It would be better if input thread would wait for bt input, and output thread would wait for new data from input thread (maybe use channels)
-   This could be done with condvar or channels
-*/
-
 fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");
@@ -62,9 +57,9 @@ fn main() {
 
     // ----- Create all channels
     // These are used to tell the reading and writing threads to finish (they are normally infinite loops)
-    let (sender_ctrlc, recv_ctrlc) = channel();
-    let (sender_write_output, recv_write_output): (Sender<bool>, Receiver<bool>) = channel();
-    let (sender_read_input, recv_read_input): (Sender<bool>, Receiver<bool>) = channel();
+    let (sender_ctrlc, recv_ctrlc) = mpsc::channel();
+    let (sender_exit_request, recv_exit_request): (Sender<()>, Receiver<()>) = bounded(1);
+    let (sender_gamepad, recv_gamepad): (Sender<UniversalGamepad>, Receiver<UniversalGamepad>) = unbounded();
 
     // ----- Setup CTRL+C handler
     ctrlc::set_handler(move || sender_ctrlc.send(()).expect("Could not send signal on channel.")).expect("Error setting Ctrl-C handler");
@@ -89,11 +84,9 @@ fn main() {
     println!("Gamepad connected");
 
     // ----- Reading input of BT gamepad
-    let universal_gamepad: Arc<Mutex<UniversalGamepad>> = Arc::new(Mutex::new(UniversalGamepad::nothing_pressed()));
-    let gamepad_clone = universal_gamepad.clone(); // Cloning has to be done outside of the closure
-    let thread_handle_read_input = thread::Builder::new()
+    let thread_handle_input = thread::Builder::new()
         .name("input".to_string())
-        .spawn(move || hidapi_fn::read_bt_gamepad_input(device, input_gamepad, gamepad_clone, recv_read_input))
+        .spawn(move || hidapi_fn::read_bt_gamepad_input(device, input_gamepad, sender_gamepad, recv_exit_request))
         .expect("creating input thread failed");
     println!("Input thread created");
 
@@ -102,10 +95,9 @@ fn main() {
     thread::sleep(Duration::from_secs(1));
 
     // ----- Write Output to gadget
-    let gamepad_clone = universal_gamepad.clone();
-    let thread_handle_write_output = thread::Builder::new()
+    let thread_handle_output = thread::Builder::new()
         .name("output".to_string())
-        .spawn(move || output_gamepad.write_to_gadget_intervalic(gamepad_clone, Duration::from_millis(1), 0.01, recv_write_output))
+        .spawn(move || output_gamepad.write_to_gadget_continously(recv_gamepad))
         .expect("creating output thread failed");
     println!("Output thread created");
 
@@ -117,13 +109,10 @@ fn main() {
         Err(e) => print_error_and_exit!("Receiving from CTRL C channel failed:", e, 1),
     }
 
-    println!("Waiting for read input thread to finish");
-    sender_read_input.send(true).expect("sending to read input thread failed");
-    thread_handle_read_input.join().unwrap();
-
-    println!("Waiting for write output thread to finish");
-    sender_write_output.send(true).expect("sending to write output thread failed");
-    thread_handle_write_output.join().unwrap();
+    println!("Waiting for input and output threads to finish");
+    sender_exit_request.send(()).expect("sending to input thread failed");
+    thread_handle_input.join().unwrap();
+    thread_handle_output.join().unwrap();
 
     // clean_up_device() removes hidg0 file, so this has to run after write output thread is closed
     println!("Disabling gadget");

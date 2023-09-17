@@ -202,10 +202,10 @@ pub const DUALSENSE: Gamepad = Gamepad {
 };
 
 fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
-    let mut output: UniversalGamepad = UniversalGamepad::nothing_pressed();
+    let mut gamepad: UniversalGamepad = UniversalGamepad::nothing_pressed();
     let dpad_byte = 0b00001111 & bt_input[9];
 
-    output.sticks = Sticks {
+    gamepad.sticks = Sticks {
         left: Stick {
             x: bt_input[2],
             y: bt_input[3],
@@ -223,11 +223,11 @@ fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
             },
         },
     };
-    output.triggers = Triggers {
+    gamepad.triggers = Triggers {
         left: bt_input[6],
         right: bt_input[7],
     };
-    output.buttons.bumpers = Bumpers {
+    gamepad.buttons.bumpers = Bumpers {
         left: match bt_input[10] {
             1 => true,
             _ => false,
@@ -237,19 +237,19 @@ fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
             _ => false,
         },
     };
-    output.buttons.main = MainButtons {
+    gamepad.buttons.main = MainButtons {
         upper: (bt_input[9] & 0b1000_0000 != 0),
         right: (bt_input[9] & 0b0100_0000 != 0),
         lower: (bt_input[9] & 0b0010_0000 != 0),
         left: (bt_input[9] & 0b0001_0000 != 0),
     };
-    output.buttons.dpad = DPad {
+    gamepad.buttons.dpad = DPad {
         right: (dpad_byte == 1 || dpad_byte == 2 || dpad_byte == 3),
         down: (dpad_byte == 3 || dpad_byte == 4 || dpad_byte == 5),
         left: (dpad_byte == 5 || dpad_byte == 6 || dpad_byte == 7),
         up: (dpad_byte == 0 || dpad_byte == 1 || dpad_byte == 7),
     };
-    output.buttons.specials = SpecialButtons {
+    gamepad.buttons.specials = SpecialButtons {
         right: match bt_input[10] {
             32 => true,
             _ => false,
@@ -263,7 +263,7 @@ fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
             _ => false,
         },
     };
-    output.other.touchpad = Some(Touchpad {
+    gamepad.other.touchpad = Some(Touchpad {
         x_coord: 0,
         y_coord: 0,
         touched: false,
@@ -273,9 +273,9 @@ fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
         },
     });
 
-    // DUALSENSE.debug_output_bt_input(&output);
+    DUALSENSE.debug_output_bt_input(&gamepad);
 
-    return output;
+    return gamepad;
 
     // maybe bytes 35 and 36 together are left-right
 
@@ -338,8 +338,6 @@ fn _universal_gamepad_to_usb_output(gamepad: &UniversalGamepad) -> Vec<u8> {
         } else {
             byte |= 8
         }
-
-        println!("byte: {:8b}  up: {:5} right: {:5}", byte, gamepad.buttons.dpad.up, gamepad.buttons.dpad.right);
 
         byte
     };
