@@ -1,6 +1,6 @@
 [package]
 name = "gamepad-bridge"
-version = "0.5.5-13"
+version = "0.5.5-14"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -10,5 +10,4 @@ ctrlc = "3.4.0"
 hidapi = "2.4.1"
 version = "3.0.0"
 termion = "2.0.1"
-rand = "0.8.5"
-flume = { version = "0.11.0", default-features = false, features = ["spin", "select"] }
+flume = { version = "0.11.0", default-features = false, features = ["select"] }

@@ -1,6 +1,6 @@
-use std::{process::Command, time::{Duration, Instant}, thread};
+use std::{process::Command, time::{Duration, Instant}};
 
-use rand::Rng;
+// use rand::Rng;
 
 /// Input values:
 /// 1. Message
@@ -103,7 +103,7 @@ fn _single_thread_interval_benchmarked(interval: Duration) {
             if code_ran == false {
                 // program code that should be run once per cycle here
 
-                _random_wait(Duration::from_micros(350), Duration::from_micros(500));
+                // _random_wait(Duration::from_micros(350), Duration::from_micros(500));
                 code_counter += 1;
             }
             code_ran = true;
@@ -149,15 +149,15 @@ fn _single_thread_interval_benchmarked(interval: Duration) {
     println!("Avg PERC {:2.3?} %", avg_perc / ROUNDS as f64);
 }
 
-fn _random_wait(min: Duration, max: Duration) {
-    let min_ns = min.as_nanos() as u64;
-    let max_ns = max.as_nanos() as u64;
+// fn _random_wait(min: Duration, max: Duration) {
+//     let min_ns = min.as_nanos() as u64;
+//     let max_ns = max.as_nanos() as u64;
 
-    let range: std::ops::RangeInclusive<u64> = min_ns..=max_ns;
+//     let range: std::ops::RangeInclusive<u64> = min_ns..=max_ns;
 
-    let mut rng = rand::thread_rng();
-    let wait_time = Duration::from_nanos(rng.gen_range(range));
+//     let mut rng = rand::thread_rng();
+//     let wait_time = Duration::from_nanos(rng.gen_range(range));
 
-    // println!("waiting for {:?}", wait_time);
-    thread::sleep(wait_time);
-}
+//     // println!("waiting for {:?}", wait_time);
+//     thread::sleep(wait_time);
+// }
