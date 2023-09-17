@@ -1,4 +1,7 @@
-use std::{process::Command, time::{Duration, Instant}};
+use std::{
+    process::Command,
+    time::{Duration, Instant},
+};
 
 // use rand::Rng;
 
@@ -76,10 +79,9 @@ pub fn run_cmd(current_dir: &str, cmd: &str) -> Result<(), ()> {
 /// Results:
 /// - Code ran 9 996x out of 10 000x
 /// - Average deviation from interval is 18ns
-/// 
+///
 /// This benchmark version is mainly here to experiment a bit
 fn _single_thread_interval_benchmarked(interval: Duration) {
-
     // its safe to use u128 for nanoseconds
     // 2^64 ns are ~580 years
     // so 2^128 are 580² years

@@ -209,18 +209,12 @@ fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
         left: Stick {
             x: bt_input[2],
             y: bt_input[3],
-            pressed: match bt_input[10] {
-                64 => true,
-                _ => false,
-            },
+            pressed: (bt_input[10] & 0b0100_0000 != 0),
         },
         right: Stick {
             x: bt_input[4],
             y: bt_input[5],
-            pressed: match bt_input[10] {
-                128 => true,
-                _ => false,
-            },
+            pressed: (bt_input[10] & 0b1000_0000 != 0),
         },
     };
     gamepad.triggers = Triggers {
@@ -228,14 +222,8 @@ fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
         right: bt_input[7],
     };
     gamepad.buttons.bumpers = Bumpers {
-        left: match bt_input[10] {
-            1 => true,
-            _ => false,
-        },
-        right: match bt_input[10] {
-            2 => true,
-            _ => false,
-        },
+        left: (bt_input[10] & 0b0000_0001 != 0),
+        right: (bt_input[10] & 0b0000_0010 != 0),
     };
     gamepad.buttons.main = MainButtons {
         upper: (bt_input[9] & 0b1000_0000 != 0),
@@ -250,14 +238,8 @@ fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
         up: (dpad_byte == 0 || dpad_byte == 1 || dpad_byte == 7),
     };
     gamepad.buttons.specials = SpecialButtons {
-        right: match bt_input[10] {
-            32 => true,
-            _ => false,
-        },
-        left: match bt_input[10] {
-            16 => true,
-            _ => false,
-        },
+        right: (bt_input[10] & 0b0010_0000 != 0),
+        left: (bt_input[10] & 0b0001_0000 != 0),
         logo: match bt_input[11] {
             1 => true,
             _ => false,
@@ -273,7 +255,7 @@ fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
         },
     });
 
-    DUALSENSE.debug_output_bt_input(&gamepad);
+    // DUALSENSE.debug_output_bt_input(&gamepad);
 
     return gamepad;
 
@@ -286,6 +268,9 @@ fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
     // adjust which bytes should be visible. For PS Gamepads the first two bytes are just counters
     // print!("{:05}\t", combined_u16);
 
+    // TODO Battery-State Support (see vec in _universal_gamepad_to_usb_output)
+    // TODO gyroscope support
+
     // TODO Touchpad Support
     // when Byte 34 changes, the touchpad state changed (either now touched or now not touched)
     //  also this counts up each time the state changes
@@ -296,22 +281,20 @@ fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
 }
 
 fn _universal_gamepad_to_usb_output(gamepad: &UniversalGamepad) -> Vec<u8> {
-    // TODO Add remaining buttons
-
     let buttons_and_dpad: u8 = {
         let mut byte: u8 = 0;
 
         if gamepad.buttons.main.upper {
-            byte |= 0b1000_0000
+            byte += 0b1000_0000
         };
         if gamepad.buttons.main.right {
-            byte |= 0b0100_0000
+            byte += 0b0100_0000
         };
         if gamepad.buttons.main.lower {
-            byte |= 0b0010_0000
+            byte += 0b0010_0000
         };
         if gamepad.buttons.main.left {
-            byte |= 0b0001_0000
+            byte += 0b0001_0000
         };
 
         // The DPAD Buttons are not like above
@@ -346,30 +329,30 @@ fn _universal_gamepad_to_usb_output(gamepad: &UniversalGamepad) -> Vec<u8> {
         let mut byte: u8 = 0;
 
         if gamepad.buttons.bumpers.left {
-            byte += 1;
+            byte += 0x1;
         }
         if gamepad.buttons.bumpers.right {
-            byte += 2;
+            byte += 0x2;
         }
         if gamepad.triggers.left != 0 {
-            byte += 4;
+            byte += 0x4;
         }
         if gamepad.triggers.right != 0 {
-            byte += 8;
+            byte += 0x8;
         }
         // ^ this is max 0x0F if all are pressed
 
         if gamepad.buttons.specials.left {
-            byte += 10;
+            byte += 0x10;
         }
         if gamepad.buttons.specials.right {
-            byte += 20;
+            byte += 0x20;
         }
         if gamepad.sticks.left.pressed {
-            byte += 40;
+            byte += 0x40;
         }
         if gamepad.sticks.right.pressed {
-            byte += 80;
+            byte += 0x80;
         }
         // ^ this is max 0xF0 if all are pressed
 
@@ -410,20 +393,20 @@ fn _universal_gamepad_to_usb_output(gamepad: &UniversalGamepad) -> Vec<u8> {
         0,                // seconds ?
         0xee,             // might be charging state (in %)
         0xad,             // might be charging state (in %)
-        0x00,             // gyroskop here (seems to be relative, not absolute)
-        0x00,             // gyroskop here (seems to be relative, not absolute)
-        0xff,             // gyroskop here (seems to be relative, not absolute)
-        0xff,             // gyroskop here (seems to be relative, not absolute)
-        0x02,             // gyroskop here (seems to be relative, not absolute)
-        0x00,             // gyroskop here (seems to be relative, not absolute)
-        0x06,             // gyroskop here (seems to be relative, not absolute)
-        0x00,             // gyroskop here (seems to be relative, not absolute)
-        0x81,             // gyroskop here (seems to be relative, not absolute)
-        0x1f,             // gyroskop here (seems to be relative, not absolute)
-        0x07,             // gyroskop here (seems to be relative, not absolute)
-        0x06,             // gyroskop here (seems to be relative, not absolute)
-        0x46,             // gyroskop here (seems to be relative, not absolute)
-        0x66,             // gyroskop here (seems to be relative, not absolute)
+        0x00,             // gyroscope here (seems to be relative, not absolute)
+        0x00,             // gyroscope here (seems to be relative, not absolute)
+        0xff,             // gyroscope here (seems to be relative, not absolute)
+        0xff,             // gyroscope here (seems to be relative, not absolute)
+        0x02,             // gyroscope here (seems to be relative, not absolute)
+        0x00,             // gyroscope here (seems to be relative, not absolute)
+        0x06,             // gyroscope here (seems to be relative, not absolute)
+        0x00,             // gyroscope here (seems to be relative, not absolute)
+        0x81,             // gyroscope here (seems to be relative, not absolute)
+        0x1f,             // gyroscope here (seems to be relative, not absolute)
+        0x07,             // gyroscope here (seems to be relative, not absolute)
+        0x06,             // gyroscope here (seems to be relative, not absolute)
+        0x46,             // gyroscope here (seems to be relative, not absolute)
+        0x66,             // gyroscope here (seems to be relative, not absolute)
         0,                // this is a really slow counter (goes up every ~10s)
         0x00,             // ??
         0x14,             // ??

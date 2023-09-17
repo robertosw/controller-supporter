@@ -15,6 +15,7 @@ echo ">> creating local folders"
 echo
 mkdir ./aarch64/
 mkdir ./aarch64/target
+rm ./aarch64/gamepad-bridge
 
 echo
 echo ">> building image for linux/arm64"

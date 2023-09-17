@@ -157,8 +157,5 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, sender:
                 continue;
             }
         };
-
-        // The message sending to the other thread + evaluation time is sometimes above 100µs
-        thread::sleep(Duration::from_micros(200));
     }
 }
