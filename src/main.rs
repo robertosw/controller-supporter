@@ -49,13 +49,14 @@ fn main() {
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");
 
     // ----- Enable Gadget
-    // If this is done later, the host might run into errors when trying to classify this device and turn it off
+    // If this is done at a later point, the host might run into errors when trying to classify this device and turn it off
     // TODO output_gamepad should be expected from a command argument or set to a default if not given
 
     let output_gamepad: &Gamepad = &DUALSENSE;
-    // output_gamepad.gadget.configure_device();
+    output_gamepad.gadget.configure_device();
 
     // ----- Create all channels
+    // These are used to tell the reading and writing threads to finish (they are normally infinite loops)
     let (sender_ctrlc, recv_ctrlc) = channel();
     let (sender_write_output, recv_write_output): (Sender<bool>, Receiver<bool>) = channel();
     let (sender_read_input, recv_read_input): (Sender<bool>, Receiver<bool>) = channel();
@@ -64,6 +65,7 @@ fn main() {
     ctrlc::set_handler(move || sender_ctrlc.send(()).expect("Could not send signal on channel.")).expect("Error setting Ctrl-C handler");
 
     // ----- BT connection here
+    // TODO
 
     // ----- What gamepad is connected?
     let api = match HidApi::new() {
@@ -100,15 +102,24 @@ fn main() {
     // ----- Clean up (if Ctrl + C is pressed)
 
     // This is blocking
-    recv_ctrlc.recv().expect("Could not receive from channel.");
+    match recv_ctrlc.recv() {
+        Ok(_) => (),
+        Err(e) => print_error_and_exit!("Receiving from CTRL C channel failed:", e, 1),
+    }
 
-    println!("CTRL C pressed");
+    println!("Waiting for read input thread to finish");
     sender_read_input.send(true).expect("sending to read input thread failed");
-    sender_write_output.send(true).expect("sending to write output thread failed");
-
-    // TODO undo gadget config completely, so that this program can be rerun without errors from configure_device()
     thread_handle_read_input.join().unwrap();
+
+    println!("Waiting for write output thread to finish");
+    sender_write_output.send(true).expect("sending to write output thread failed");
     thread_handle_write_output.join().unwrap();
+
+    // clean_up_device() removes hidg0 file, so this has to run after write output thread is closed
+    println!("Disabling gadget");
+    output_gamepad.gadget.clean_up_device();
+
+    println!("Everythings cleaned up :)");
 }
 
 fn _bt_program_flow() {

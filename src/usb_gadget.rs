@@ -39,6 +39,27 @@ pub struct UsbGadgetDescriptor {
 }
 
 impl UsbGadgetDescriptor {
+    /// Unbinds the gadget and removes every that gets created by `configure_device()`
+    pub fn clean_up_device(&self) {
+        // Free up UDC = disconnect from host
+        match File::options().write(true).truncate(true).open(&(DEVICE_DIR.to_string() + "/UDC")) {
+            Ok(mut file) => match file.write_all("".as_bytes()) {
+                Ok(_) => (),
+                Err(_) => print_and_exit!("Could not write to file UDC", 10),
+            },
+            Err(_) => print_and_exit!("Could not open file UDC", 11),
+        };
+
+        // remove everything from usb_gadget directory
+        // rm -rf is not permitted
+        fs::remove_file(CONFIGS_DIR.to_string() + "/hid.usb0").expect("removing configs/hid.usb0 failed");
+        fs::remove_dir(CONFIGS_DIR.to_string() + "/strings/0x409/").expect("removing configs/strings/0x409 failed");
+        fs::remove_dir(CONFIGS_DIR).expect("removing configs/c.1 failed");
+        fs::remove_dir(FNC_HID_DIR).expect("removing functions/hid.usb0 failed");
+        fs::remove_dir(ENG_STR_DIR).expect("removing strings/0x409 failed");
+        fs::remove_dir(DEVICE_DIR).expect("removing usb_gadget/raspi failed");
+    }
+
     /// Using linux' ConfigFS, create the given usb device
     pub fn configure_device(&self) {
         self._create_directories();

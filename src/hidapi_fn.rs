@@ -45,7 +45,7 @@ fn _process_input_unknown(input: Vec<u8>) {
 /// Returns in `HidApiGamepadError` if:
 /// - No bluetooth hid device is connected
 /// - None of the connected devices are from a supported vendor
-/// - None of known vendor devices are known products
+/// - None of known vendor devices are supported products
 /// - Opening a device failed
 pub fn get_hid_gamepad(api: &HidApi) -> Result<(HidDevice, GamepadModel), HidApiGamepadError> {
     let bluetooth_devices: Vec<&DeviceInfo> = match _get_bluetooth_hid_devices(api) {
@@ -131,13 +131,9 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, univers
 
     loop {
         match recv.try_recv() {
-            Ok(_) | Err(TryRecvError::Disconnected) => {
-                println!("Terminating.");
-                break;
-            }
-            Err(TryRecvError::Empty) => println!("_"),
+            Ok(_) | Err(TryRecvError::Disconnected) => break,
+            Err(TryRecvError::Empty) => (),
         }
-        // TODO add some way that this thread is terminated if main thread crashes or if this is supposed to be ending (channels?)
 
         // setting -1 as timeout means waiting for the next input event, in this mode valid_bytes_count == HID_ARRAY_SIZE
         // setting 0ms as timeout, probably means sometimes the previous input event is taken, but the execution time of this whole block is 100x faster!

@@ -2,7 +2,10 @@ use std::{
     fs::File,
     io::Write,
     process::exit,
-    sync::{Arc, Mutex, mpsc::{TryRecvError, Receiver}},
+    sync::{
+        mpsc::{Receiver, TryRecvError},
+        Arc, Mutex,
+    },
     thread,
     time::{Duration, Instant},
 };
@@ -67,11 +70,8 @@ impl Gamepad {
 
         loop {
             match recv.try_recv() {
-                Ok(_) | Err(TryRecvError::Disconnected) => {
-                    println!("Terminating.");
-                    break;
-                }
-                Err(TryRecvError::Empty) => println!(":"),
+                Ok(_) | Err(TryRecvError::Disconnected) => break,
+                Err(TryRecvError::Empty) => (),
             }
             {
                 if code_ran == false {
