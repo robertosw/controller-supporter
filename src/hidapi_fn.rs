@@ -1,7 +1,10 @@
 use ::hidapi::{BusType, HidApi};
 use hidapi::{DeviceInfo, HidDevice};
 use std::{
-    sync::{Arc, Mutex},
+    sync::{
+        mpsc::{Receiver, TryRecvError},
+        Arc, Mutex,
+    },
     thread,
     time::Duration,
 };
@@ -42,7 +45,7 @@ fn _process_input_unknown(input: Vec<u8>) {
 /// Returns in `HidApiGamepadError` if:
 /// - No bluetooth hid device is connected
 /// - None of the connected devices are from a supported vendor
-/// - None of known vendor devices are known products
+/// - None of known vendor devices are supported products
 /// - Opening a device failed
 pub fn get_hid_gamepad(api: &HidApi) -> Result<(HidDevice, GamepadModel), HidApiGamepadError> {
     let bluetooth_devices: Vec<&DeviceInfo> = match _get_bluetooth_hid_devices(api) {
@@ -116,7 +119,7 @@ fn _get_bluetooth_hid_devices(api: &HidApi) -> Result<Vec<&DeviceInfo>, ()> {
     return Ok(bluetooth_devices);
 }
 
-pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, universal_gamepad: Arc<Mutex<UniversalGamepad>>) -> ! {
+pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, universal_gamepad: Arc<Mutex<UniversalGamepad>>, recv: Receiver<bool>) {
     // if set to false, calls to read may return nothing, but also dont block
     match device.set_blocking_mode(false) {
         Ok(_) => (),
@@ -127,6 +130,11 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, univers
     let mut buf: [u8; 100] = [0 as u8; 100];
 
     loop {
+        match recv.try_recv() {
+            Ok(_) | Err(TryRecvError::Disconnected) => break,
+            Err(TryRecvError::Empty) => (),
+        }
+
         // setting -1 as timeout means waiting for the next input event, in this mode valid_bytes_count == HID_ARRAY_SIZE
         // setting 0ms as timeout, probably means sometimes the previous input event is taken, but the execution time of this whole block is 100x faster!
         // also: reading in blocking mode might be problematic if the gamepad is disconnected => infinite wait

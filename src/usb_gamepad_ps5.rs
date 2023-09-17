@@ -273,7 +273,7 @@ fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
         },
     });
 
-    DUALSENSE.debug_output_bt_input(&output);
+    // DUALSENSE.debug_output_bt_input(&output);
 
     return output;
 
@@ -296,6 +296,8 @@ fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
 }
 
 fn _universal_gamepad_to_usb_output(gamepad: &UniversalGamepad) -> Vec<u8> {
+    // TODO Add remaining buttons
+
     let out: Vec<u8> = vec![
         0x01,
         gamepad.sticks.left.x,
