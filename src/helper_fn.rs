@@ -40,7 +40,7 @@ macro_rules! print_error_and_exit {
 
 /// always runs command as sudo
 pub fn run_cmd(current_dir: &str, cmd: &str) -> Result<(), ()> {
-    println!("\n$ sudo {cmd}");
+    // println!("\n$ sudo {cmd}");
     let args: Vec<&str> = cmd.split_whitespace().collect();
 
     let output = match Command::new("sudo").args(args).current_dir(current_dir).output() {
@@ -50,22 +50,22 @@ pub fn run_cmd(current_dir: &str, cmd: &str) -> Result<(), ()> {
             return Err(());
         }
     };
-    let stdout = match String::from_utf8(output.stdout) {
+    let _stdout = match String::from_utf8(output.stdout) {
         Ok(string) => string,
         Err(error) => {
             println!("! stdout of command {:?} could not be parsed: {:?}", cmd, error);
             return Err(());
         }
     };
-    let stderr = match String::from_utf8(output.stderr) {
+    let _stderr = match String::from_utf8(output.stderr) {
         Ok(string) => string,
         Err(error) => {
             println!("! stderr of command {:?} could not be parsed: {:?}", cmd, error);
             return Err(());
         }
     };
-    println!("> {:?}", stdout);
-    println!("! {:?}", stderr);
+    // println!("> {:?}", stdout);
+    // println!("! {:?}", stderr);
 
     return Ok(());
 }

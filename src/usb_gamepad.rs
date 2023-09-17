@@ -26,9 +26,21 @@ impl Gamepad {
     /// - Transforms the given `UniversalGamepad` into the correct output array for this `Gamepad`
     /// - Attempts to write the entire output array into the file /dev/hidg0
     pub fn write_to_gadget_continously(&self, receiver: Receiver<UniversalGamepad>) {
+        let start_instant: Instant = Instant::now();
+
         for gamepad in receiver.iter() {
-            if receiver.len() > 1 {
-                println!("skipped one input");
+            let msg_count = receiver.len();
+            if msg_count > 5 {
+                let all_msgs = receiver.drain().enumerate();
+
+                for (index, _) in all_msgs {
+                    if index + 1 < msg_count {
+                        continue;
+                    }
+                }
+                println!("skipped {msg_count} inputs {:?} after launch", (start_instant - Instant::now()));
+            } else if msg_count > 1 {
+                println!("skipped 1 input {:?} after launch", (start_instant - Instant::now()));
                 continue; // take only the latest inputs
             }
 

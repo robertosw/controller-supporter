@@ -1,4 +1,4 @@
-#![allow(dead_code, unreachable_code)]
+#![allow(dead_code)]
 
 #[macro_use]
 extern crate version;
@@ -54,6 +54,7 @@ fn main() {
     // TODO output_gamepad should be expected from a command argument or set to a default if not given
     let output_gamepad: &Gamepad = &DUALSENSE;
     output_gamepad.gadget.configure_device();
+    println!("Gadget enabled");
 
     // ----- Create all channels
     // These are used to tell the reading and writing threads to finish (they are normally infinite loops)
@@ -88,7 +89,7 @@ fn main() {
         .name("input".to_string())
         .spawn(move || hidapi_fn::read_bt_gamepad_input(device, input_gamepad, sender_gamepad, recv_exit_request))
         .expect("creating input thread failed");
-    println!("Input thread created");
+    println!("Input thread running");
 
     // TODO Maybe remove this later, but currently the output-writing step is reached so fast that /dev/hidg0 is not yet ready.
     // This just prevents some of the "Cannot send after transport endpoint shutdown" errors because of this ^
@@ -99,7 +100,8 @@ fn main() {
         .name("output".to_string())
         .spawn(move || output_gamepad.write_to_gadget_continously(recv_gamepad))
         .expect("creating output thread failed");
-    println!("Output thread created");
+    println!("Output thread running");
+    println!("");
 
     // ----- Clean up (if Ctrl + C is pressed)
 

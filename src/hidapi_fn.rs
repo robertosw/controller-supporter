@@ -5,8 +5,6 @@ use flume::Sender;
 use flume::TryRecvError;
 use hidapi::DeviceInfo;
 use hidapi::HidDevice;
-use std::thread;
-use std::time::Duration;
 
 use crate::{universal_gamepad::UniversalGamepad, usb_gamepad::Gamepad};
 
