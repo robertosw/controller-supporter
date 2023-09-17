@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unreachable_code)]
 
 #[macro_use]
 extern crate version;
@@ -51,10 +51,6 @@ fn main() {
     // If this is done later, the host might run into errors when trying to classify this device and turn it off
     // TODO output_gamepad should be expected from a command argument or set to a default if not given
 
-    single_thread_interval_benchmarked(Duration::from_micros(500));
-
-    exit(0);
-
     let output_gamepad: &Gamepad = &DUALSENSE;
     // output_gamepad.gadget.configure_device();
 
@@ -87,7 +83,8 @@ fn main() {
 
     // ----- Write Output to gadget
     let gamepad_clone = universal_gamepad.clone();
-    let thread_handle_write_output = thread::spawn(move || output_gamepad.write_to_gadget_continously(gamepad_clone));
+    // let thread_handle_write_output = thread::spawn(move || output_gamepad.write_to_gadget_continously(gamepad_clone));
+    let thread_handle_write_output = thread::spawn(move || output_gamepad.write_to_gadget_intervalic(gamepad_clone, Duration::from_millis(4), 0.001));
 
     // ----- Clean up (if Ctrl + C is pressed)
     // TODO move CTRL + C handling from BT to here
@@ -105,7 +102,7 @@ fn main() {
 /// Results:
 /// - Code ran 9 996x out of 10 000x
 /// - Average deviation from interval is 18ns
-fn single_thread_interval_benchmarked(interval: Duration) {
+fn _single_thread_interval_benchmarked(interval: Duration) {
     // TODO transform this into a macro?
 
     // its safe to use u128 for nanoseconds
@@ -119,7 +116,7 @@ fn single_thread_interval_benchmarked(interval: Duration) {
 
     let mut diffs: Vec<Duration> = Vec::new();
 
-    const ROUNDS: u128 = 20000;
+    const ROUNDS: u128 = 100000;
 
     let mut code_counter = 0;
 
@@ -131,7 +128,7 @@ fn single_thread_interval_benchmarked(interval: Duration) {
             if code_ran == false {
                 // program code that should be run once per cycle here
 
-                random_wait(Duration::from_micros(250), Duration::from_micros(450));
+                _random_wait(Duration::from_micros(350), Duration::from_micros(500));
                 code_counter += 1;
             }
             code_ran = true;
@@ -145,7 +142,7 @@ fn single_thread_interval_benchmarked(interval: Duration) {
         let diff_from_interval_ns: u128 = elapsed_ns % interval_ns;
 
         let is_next_interval: bool = interval_counts_now > interval_counts_before;
-        let is_close_enough: bool = (diff_from_interval_ns as f32 / interval_ns as f32) <= 0.01;
+        let is_close_enough: bool = (diff_from_interval_ns as f32 / interval_ns as f32) <= 0.001; // TODO This values decides alot, tests it out
 
         if is_next_interval && is_close_enough {
             let expected: Instant = start + (interval * interval_counts_now as u32);
@@ -177,7 +174,7 @@ fn single_thread_interval_benchmarked(interval: Duration) {
     println!("Avg PERC {:2.3?} %", avg_perc / ROUNDS as f64);
 }
 
-fn random_wait(min: Duration, max: Duration) {
+fn _random_wait(min: Duration, max: Duration) {
     let min_ns = min.as_nanos() as u64;
     let max_ns = max.as_nanos() as u64;
 
