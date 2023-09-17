@@ -1,7 +1,7 @@
 use flume::Receiver;
 use flume::TryRecvError;
-use std::{io::Write, process::exit, thread, time::Instant};
 use std::fs::File;
+use std::{io::Write, process::exit, thread, time::Instant};
 use std::{
     sync::{Arc, Mutex},
     time::Duration,
@@ -32,7 +32,7 @@ impl Gamepad {
                 continue; // take only the latest inputs
             }
 
-            let usb_output: Vec<u8> = self._universal_gamepad_to_usb_output(&gamepad);
+            let usb_output: Vec<u8> = self.universal_gamepad_to_usb_output(&gamepad);
 
             let mut hidg0 = match File::options().write(true).append(false).open("/dev/hidg0") {
                 Ok(file) => file,
@@ -75,7 +75,7 @@ impl Gamepad {
                 if code_ran == false {
                     // program code that might not run fast enough for interval here
                     let gamepad_locked = universal_gamepad.lock().expect("Locking Arc<Mutex<UniversalGamepad>> failed!");
-                    usb_output = self._universal_gamepad_to_usb_output(&gamepad_locked);
+                    usb_output = self.universal_gamepad_to_usb_output(&gamepad_locked);
                 }
                 code_ran = true;
             }
@@ -155,7 +155,7 @@ impl Gamepad {
     /// creates a `Vec<u8>` that is the HID Report which has to be written in `/dev/hidg0`
     ///
     /// The length will be asserted at runtime to be `self.gadget.functions_hid.report_length`. This function will **panic** if the length is not correct
-    fn _universal_gamepad_to_usb_output(&self, gamepad: &UniversalGamepad) -> Vec<u8> {
+    pub fn universal_gamepad_to_usb_output(&self, gamepad: &UniversalGamepad) -> Vec<u8> {
         return (self.universal_gamepad_to_usb_output)(gamepad);
     }
 }

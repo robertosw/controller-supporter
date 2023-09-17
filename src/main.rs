@@ -45,25 +45,6 @@ use crate::usb_gamepad_ps5::DUALSENSE;
 //  if working on native os as non root: (from /gamepad-bridge)
 //  - build & run   `cargo build --release && sudo chown root:root target/release/gamepad-bridge && sudo chmod +s target/release/gamepad-bridge && /target/release/gamepad-bridge`
 
-/* TODO
-    The input and output thread are taking up nearly 100% cpu all the time
-    It would be better if input thread would wait for bt input, and output thread would wait for new data from input thread
-
-    T1 / T2 = thread 1 / 2
-
-    - Main creates two channels, channel one for T1 -> T2 and channel two for Main -> T1
-    - Usage Channel One:
-        - T2 uses receiver.recv inside its loop to block until a new message is recieved
-        - After recieving, the channel is cleared automatically
-        - This way T2 only works for new messages (the interval is lost, but maybe thats not a problem)
-            - This could still be solved by async-std and async_std::thread::sleep_until
-    - Usage Channel Two:
-        - Main sends nothing to T1, apart from the request to exit
-        - T1 closes the channel to T2, and by doing so T2 knows that it has to exit as well
-
-    Time delay from send to recieve is ~ 15µs on my notebook
-*/
-
 fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");

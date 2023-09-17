@@ -120,7 +120,7 @@ fn _get_bluetooth_hid_devices(api: &HidApi) -> Result<Vec<&DeviceInfo>, ()> {
 
 pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, sender: Sender<UniversalGamepad>, receiver_exit_request: Receiver<()>) {
     // if set to false, calls to read may return nothing, but also dont block
-    match device.set_blocking_mode(false) {
+    match device.set_blocking_mode(true) {
         Ok(_) => (),
         Err(err) => panic!("HidError: {:?}", err),
     };
@@ -141,11 +141,14 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, sender:
         // setting -1 as timeout means waiting for the next input event, in this mode valid_bytes_count == HID_ARRAY_SIZE
         // setting 0ms as timeout, probably means sometimes the previous input event is taken, but the execution time of this whole block is 100x faster!
         // also: reading in blocking mode might be problematic if the gamepad is disconnected => infinite wait
-        match device.read_timeout(&mut buf[..], 0) {
+        match device.read_timeout(&mut buf[..], -1) {
             Ok(value) => match value.cmp(&min_size) {
                 std::cmp::Ordering::Greater => {
                     let gamepad = input_gamepad.bt_input_to_universal_gamepad(&buf.to_vec());
-                    sender.send(gamepad);
+                    match sender.send(gamepad) {
+                        Ok(_) => {}
+                        Err(err) => println!("Error sending gamepad to output thread: {err}"),
+                    };
                 }
                 _ => continue,
             },
@@ -155,7 +158,7 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, sender:
             }
         };
 
-        // TODO can this be changed to wait for inputs?
-        thread::sleep(Duration::from_micros(100));
+        // The message sending to the other thread + evaluation time is sometimes above 100µs
+        thread::sleep(Duration::from_micros(200));
     }
 }
