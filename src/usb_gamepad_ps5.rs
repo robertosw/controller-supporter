@@ -298,7 +298,7 @@ fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
 fn _universal_gamepad_to_usb_output(gamepad: &UniversalGamepad) -> Vec<u8> {
     // TODO Add remaining buttons
 
-    let buttons_and_dpad = {
+    let buttons_and_dpad: u8 = {
         let mut byte: u8 = 0;
 
         if gamepad.buttons.main.upper {
@@ -342,6 +342,57 @@ fn _universal_gamepad_to_usb_output(gamepad: &UniversalGamepad) -> Vec<u8> {
         byte
     };
 
+    let remaining: u8 = {
+        let mut byte: u8 = 0;
+
+        if gamepad.buttons.bumpers.left {
+            byte += 1;
+        }
+        if gamepad.buttons.bumpers.right {
+            byte += 2;
+        }
+        if gamepad.triggers.left != 0 {
+            byte += 4;
+        }
+        if gamepad.triggers.right != 0 {
+            byte += 8;
+        }
+        // ^ this is max 0x0F if all are pressed
+
+        if gamepad.buttons.specials.left {
+            byte += 10;
+        }
+        if gamepad.buttons.specials.right {
+            byte += 20;
+        }
+        if gamepad.sticks.left.pressed {
+            byte += 40;
+        }
+        if gamepad.sticks.right.pressed {
+            byte += 80;
+        }
+        // ^ this is max 0xF0 if all are pressed
+
+        byte
+    };
+
+    let logo_touchpad: u8 = {
+        let touchpad_pressed: bool = match &gamepad.other.touchpad {
+            Some(val) => val.pressed,
+            None => false,
+        };
+
+        if gamepad.buttons.specials.logo && touchpad_pressed {
+            3
+        } else if touchpad_pressed {
+            2
+        } else if gamepad.buttons.specials.logo {
+            1
+        } else {
+            0
+        }
+    };
+
     let out: Vec<u8> = vec![
         0x01,
         gamepad.sticks.left.x,
@@ -352,13 +403,13 @@ fn _universal_gamepad_to_usb_output(gamepad: &UniversalGamepad) -> Vec<u8> {
         gamepad.triggers.right,
         0,                // counter
         buttons_and_dpad, // Buttons and DPad
-        0,                // Special Buttons, Bumpers, Triggers and Sticks (only WHAT is pressed, for triggers not value)
-        0,                // Logo / Touchpad
+        remaining,        // Special Buttons, Bumpers, Triggers and Sticks (only WHAT is pressed, for triggers not value)
+        logo_touchpad,    // Logo / Touchpad
         0,                // always 0
         0,                // counter
         0,                // seconds ?
-        0xee,             // might be charging state (in %) (unlikely, changes drastically after reconnect)
-        0xad,             // ??
+        0xee,             // might be charging state (in %)
+        0xad,             // might be charging state (in %)
         0x00,             // gyroskop here (seems to be relative, not absolute)
         0x00,             // gyroskop here (seems to be relative, not absolute)
         0xff,             // gyroskop here (seems to be relative, not absolute)
