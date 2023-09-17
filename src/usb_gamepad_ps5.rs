@@ -339,8 +339,6 @@ fn _universal_gamepad_to_usb_output(gamepad: &UniversalGamepad) -> Vec<u8> {
             byte |= 8
         }
 
-        println!("byte: {:8b}  up: {:5} right: {:5}", byte, gamepad.buttons.dpad.up, gamepad.buttons.dpad.right);
-
         byte
     };
 
