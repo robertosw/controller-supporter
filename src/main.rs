@@ -14,6 +14,8 @@ use std::process::Command;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc::channel;
+use std::sync::mpsc::Receiver;
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
@@ -51,11 +53,15 @@ fn main() {
     // TODO output_gamepad should be expected from a command argument or set to a default if not given
 
     let output_gamepad: &Gamepad = &DUALSENSE;
-    output_gamepad.gadget.configure_device();
+    // output_gamepad.gadget.configure_device();
+
+    // ----- Create all channels
+    let (sender_ctrlc, recv_ctrlc) = channel();
+    let (sender_write_output, recv_write_output): (Sender<bool>, Receiver<bool>) = channel();
+    let (sender_read_input, recv_read_input): (Sender<bool>, Receiver<bool>) = channel();
 
     // ----- Setup CTRL+C handler
-    let (tx, rx) = channel();
-    ctrlc::set_handler(move || tx.send(()).expect("Could not send signal on channel.")).expect("Error setting Ctrl-C handler");
+    ctrlc::set_handler(move || sender_ctrlc.send(()).expect("Could not send signal on channel.")).expect("Error setting Ctrl-C handler");
 
     // ----- BT connection here
 
@@ -78,7 +84,7 @@ fn main() {
     // ----- Reading input of BT gamepad
     let universal_gamepad: Arc<Mutex<UniversalGamepad>> = Arc::new(Mutex::new(UniversalGamepad::nothing_pressed()));
     let gamepad_clone = universal_gamepad.clone(); // Cloning has to be done outside of the closure
-    let thread_handle_read_input = thread::spawn(move || hidapi_fn::read_bt_gamepad_input(device, input_gamepad, gamepad_clone));
+    let thread_handle_read_input = thread::spawn(move || hidapi_fn::read_bt_gamepad_input(device, input_gamepad, gamepad_clone, recv_read_input));
     println!("Input reading thread created");
 
     // TODO Maybe remove this later, but currently this the output-writing step is reached so fast that /dev/hidg0 is not yet ready.
@@ -87,15 +93,18 @@ fn main() {
 
     // ----- Write Output to gadget
     let gamepad_clone = universal_gamepad.clone();
-    let thread_handle_write_output = thread::spawn(move || output_gamepad.write_to_gadget_intervalic(gamepad_clone, Duration::from_millis(1), 0.01));
+    let thread_handle_write_output =
+        thread::spawn(move || output_gamepad.write_to_gadget_intervalic(gamepad_clone, Duration::from_millis(1), 0.01, recv_write_output));
     println!("Output thread created");
 
     // ----- Clean up (if Ctrl + C is pressed)
 
     // This is blocking
-    rx.recv().expect("Could not receive from channel.");
+    recv_ctrlc.recv().expect("Could not receive from channel.");
 
     println!("CTRL C pressed");
+    sender_read_input.send(true).expect("sending to read input thread failed");
+    sender_write_output.send(true).expect("sending to write output thread failed");
 
     // TODO undo gadget config completely, so that this program can be rerun without errors from configure_device()
     thread_handle_read_input.join().unwrap();

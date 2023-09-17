@@ -1,7 +1,10 @@
 use ::hidapi::{BusType, HidApi};
 use hidapi::{DeviceInfo, HidDevice};
 use std::{
-    sync::{Arc, Mutex},
+    sync::{
+        mpsc::{Receiver, TryRecvError},
+        Arc, Mutex,
+    },
     thread,
     time::Duration,
 };
@@ -116,7 +119,7 @@ fn _get_bluetooth_hid_devices(api: &HidApi) -> Result<Vec<&DeviceInfo>, ()> {
     return Ok(bluetooth_devices);
 }
 
-pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, universal_gamepad: Arc<Mutex<UniversalGamepad>>) -> ! {
+pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, universal_gamepad: Arc<Mutex<UniversalGamepad>>, recv: Receiver<bool>) {
     // if set to false, calls to read may return nothing, but also dont block
     match device.set_blocking_mode(false) {
         Ok(_) => (),
@@ -127,6 +130,15 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, univers
     let mut buf: [u8; 100] = [0 as u8; 100];
 
     loop {
+        match recv.try_recv() {
+            Ok(_) | Err(TryRecvError::Disconnected) => {
+                println!("Terminating.");
+                break;
+            }
+            Err(TryRecvError::Empty) => println!("_"),
+        }
+        // TODO add some way that this thread is terminated if main thread crashes or if this is supposed to be ending (channels?)
+
         // setting -1 as timeout means waiting for the next input event, in this mode valid_bytes_count == HID_ARRAY_SIZE
         // setting 0ms as timeout, probably means sometimes the previous input event is taken, but the execution time of this whole block is 100x faster!
         // also: reading in blocking mode might be problematic if the gamepad is disconnected => infinite wait

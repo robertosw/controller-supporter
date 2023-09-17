@@ -2,7 +2,7 @@ use std::{
     fs::File,
     io::Write,
     process::exit,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, mpsc::{TryRecvError, Receiver}},
     thread,
     time::{Duration, Instant},
 };
@@ -53,7 +53,7 @@ impl Gamepad {
     ///     - useful values are
     ///         - `~ 0.05`, if its important that writing is done nearly every interval
     ///         - `< 0.001`, if its important that the interval is precicely hit
-    pub fn write_to_gadget_intervalic(&self, universal_gamepad: Arc<Mutex<UniversalGamepad>>, interval: Duration, max_deviation: f32) -> ! {
+    pub fn write_to_gadget_intervalic(&self, universal_gamepad: Arc<Mutex<UniversalGamepad>>, interval: Duration, max_deviation: f32, recv: Receiver<bool>) {
         // its safe to use u128 for nanoseconds
         // 2^64 ns are ~580 years
         // so 2^128 are 580² years
@@ -66,6 +66,13 @@ impl Gamepad {
         let mut usb_output: Vec<u8> = Vec::new();
 
         loop {
+            match recv.try_recv() {
+                Ok(_) | Err(TryRecvError::Disconnected) => {
+                    println!("Terminating.");
+                    break;
+                }
+                Err(TryRecvError::Empty) => println!(":"),
+            }
             {
                 if code_ran == false {
                     // program code that might not run fast enough for interval here
