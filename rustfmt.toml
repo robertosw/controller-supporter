@@ -1,1 +1,2 @@
 max_width = 160
+single_line_if_else = true

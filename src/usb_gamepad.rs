@@ -111,6 +111,8 @@ impl Gamepad {
                 code_ran = false;
                 usb_output.clear();
             }
+
+            thread::sleep(Duration::from_nanos(1)); 
         }
     }
 

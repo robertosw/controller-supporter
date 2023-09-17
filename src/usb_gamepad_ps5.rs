@@ -238,10 +238,10 @@ fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
         },
     };
     output.buttons.main = MainButtons {
-        upper: (bt_input[9] & 0b10000000 != 0),
-        right: (bt_input[9] & 0b01000000 != 0),
-        lower: (bt_input[9] & 0b00100000 != 0),
-        left: (bt_input[9] & 0b00010000 != 0),
+        upper: (bt_input[9] & 0b1000_0000 != 0),
+        right: (bt_input[9] & 0b0100_0000 != 0),
+        lower: (bt_input[9] & 0b0010_0000 != 0),
+        left: (bt_input[9] & 0b0001_0000 != 0),
     };
     output.buttons.dpad = DPad {
         right: (dpad_byte == 1 || dpad_byte == 2 || dpad_byte == 3),
@@ -298,6 +298,52 @@ fn _bt_input_to_universal_gamepad(bt_input: &Vec<u8>) -> UniversalGamepad {
 fn _universal_gamepad_to_usb_output(gamepad: &UniversalGamepad) -> Vec<u8> {
     // TODO Add remaining buttons
 
+    let buttons_and_dpad = {
+        let mut byte: u8 = 0;
+
+        if gamepad.buttons.main.upper {
+            byte |= 0b1000_0000
+        };
+        if gamepad.buttons.main.right {
+            byte |= 0b0100_0000
+        };
+        if gamepad.buttons.main.lower {
+            byte |= 0b0010_0000
+        };
+        if gamepad.buttons.main.left {
+            byte |= 0b0001_0000
+        };
+
+        // The DPAD Buttons are not like above
+        // Up is 0, right 2, down 4, left 6
+        // If right and down are pressed at the same time its 3
+        // If no buttons are pressed, the value is 0bxxxx_1000
+
+        if gamepad.buttons.dpad.up && gamepad.buttons.dpad.right {
+            byte |= 1
+        } else if gamepad.buttons.dpad.right && gamepad.buttons.dpad.down {
+            byte |= 3
+        } else if gamepad.buttons.dpad.down && gamepad.buttons.dpad.left {
+            byte |= 5
+        } else if gamepad.buttons.dpad.left && gamepad.buttons.dpad.up {
+            byte |= 7
+        } else if gamepad.buttons.dpad.up {
+            byte |= 0
+        } else if gamepad.buttons.dpad.right {
+            byte |= 2
+        } else if gamepad.buttons.dpad.down {
+            byte |= 4
+        } else if gamepad.buttons.dpad.left {
+            byte |= 6
+        } else {
+            byte |= 8
+        }
+
+        println!("byte: {:8b}  up: {:5} right: {:5}", byte, gamepad.buttons.dpad.up, gamepad.buttons.dpad.right);
+
+        byte
+    };
+
     let out: Vec<u8> = vec![
         0x01,
         gamepad.sticks.left.x,
@@ -306,63 +352,63 @@ fn _universal_gamepad_to_usb_output(gamepad: &UniversalGamepad) -> Vec<u8> {
         gamepad.sticks.right.y,
         gamepad.triggers.left,
         gamepad.triggers.right,
-        0,    // counter
-        0,    // Buttons and DPad
-        0,    // Special Buttons, Bumpers, Triggers and Sticks (only WHAT is pressed, for triggers not value)
-        0,    // Logo / Touchpad
-        0,    // always 0
-        0,    // counter
-        0,    // seconds ?
-        0xee, // might be charging state (in %) (unlikely, changes drastically after reconnect)
-        0xad, // ??
-        0x00, // gyroskop here (seems to be relative, not absolute)
-        0x00, // gyroskop here (seems to be relative, not absolute)
-        0xff, // gyroskop here (seems to be relative, not absolute)
-        0xff, // gyroskop here (seems to be relative, not absolute)
-        0x02, // gyroskop here (seems to be relative, not absolute)
-        0x00, // gyroskop here (seems to be relative, not absolute)
-        0x06, // gyroskop here (seems to be relative, not absolute)
-        0x00, // gyroskop here (seems to be relative, not absolute)
-        0x81, // gyroskop here (seems to be relative, not absolute)
-        0x1f, // gyroskop here (seems to be relative, not absolute)
-        0x07, // gyroskop here (seems to be relative, not absolute)
-        0x06, // gyroskop here (seems to be relative, not absolute)
-        0x46, // gyroskop here (seems to be relative, not absolute)
-        0x66, // gyroskop here (seems to be relative, not absolute)
-        0,    // this is a really slow counter (goes up every ~10s)
-        0x00, // ??
-        0x14, // ??
-        0x80, // ??
-        0x00, // ??
-        0x00, // ??
-        0x00, // ??
-        0x80, // ??
-        0x00, // ??
-        0x00, // ??
-        0x00, // ??
-        0x00, // ??
-        0x09, // ??
-        0x09, // ??
-        0x00, // ??
-        0x00, // ??
-        0x00, // ??
-        0x00, // ??
-        0x00, // ??
-        0xe3, // random?
-        0x79, // random?
-        0xab, // random?
-        0x00, // slow counter
-        0x17, // constant?
-        0x08, // constant?
-        0x00, // constant?
-        0x5b, // random?
-        0x7f, // random?
-        0xef, // random?
-        0x9c, // random?
-        0xac, // random?
-        0x03, // random?
-        0x92, // random?
-        0x30, // random?
+        0,                // counter
+        buttons_and_dpad, // Buttons and DPad
+        0,                // Special Buttons, Bumpers, Triggers and Sticks (only WHAT is pressed, for triggers not value)
+        0,                // Logo / Touchpad
+        0,                // always 0
+        0,                // counter
+        0,                // seconds ?
+        0xee,             // might be charging state (in %) (unlikely, changes drastically after reconnect)
+        0xad,             // ??
+        0x00,             // gyroskop here (seems to be relative, not absolute)
+        0x00,             // gyroskop here (seems to be relative, not absolute)
+        0xff,             // gyroskop here (seems to be relative, not absolute)
+        0xff,             // gyroskop here (seems to be relative, not absolute)
+        0x02,             // gyroskop here (seems to be relative, not absolute)
+        0x00,             // gyroskop here (seems to be relative, not absolute)
+        0x06,             // gyroskop here (seems to be relative, not absolute)
+        0x00,             // gyroskop here (seems to be relative, not absolute)
+        0x81,             // gyroskop here (seems to be relative, not absolute)
+        0x1f,             // gyroskop here (seems to be relative, not absolute)
+        0x07,             // gyroskop here (seems to be relative, not absolute)
+        0x06,             // gyroskop here (seems to be relative, not absolute)
+        0x46,             // gyroskop here (seems to be relative, not absolute)
+        0x66,             // gyroskop here (seems to be relative, not absolute)
+        0,                // this is a really slow counter (goes up every ~10s)
+        0x00,             // ??
+        0x14,             // ??
+        0x80,             // ??
+        0x00,             // ??
+        0x00,             // ??
+        0x00,             // ??
+        0x80,             // ??
+        0x00,             // ??
+        0x00,             // ??
+        0x00,             // ??
+        0x00,             // ??
+        0x09,             // ??
+        0x09,             // ??
+        0x00,             // ??
+        0x00,             // ??
+        0x00,             // ??
+        0x00,             // ??
+        0x00,             // ??
+        0xe3,             // random?
+        0x79,             // random?
+        0xab,             // random?
+        0x00,             // slow counter
+        0x17,             // constant?
+        0x08,             // constant?
+        0x00,             // constant?
+        0x5b,             // random?
+        0x7f,             // random?
+        0xef,             // random?
+        0x9c,             // random?
+        0xac,             // random?
+        0x03,             // random?
+        0x92,             // random?
+        0x30,             // random?
     ];
 
     let expected_length = DUALSENSE.gadget.functions_hid.report_length as usize;

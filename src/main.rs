@@ -44,6 +44,11 @@ use crate::usb_gamepad_ps5::DUALSENSE;
 //  if working on native os as non root: (from /gamepad-bridge)
 //  - build & run   `cargo build --release && sudo chown root:root target/release/gamepad-bridge && sudo chmod +s target/release/gamepad-bridge && /target/release/gamepad-bridge`
 
+/* TODO
+   The input and output thread are taking up nearly 100% cpu all the time
+   It would be better if input thread would wait for bt input, and output thread would wait for new data from input thread (maybe use channels)
+*/
+
 fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");
@@ -103,7 +108,7 @@ fn main() {
 
     // This is blocking
     match recv_ctrlc.recv() {
-        Ok(_) => (),
+        Ok(_) => println!(""),
         Err(e) => print_error_and_exit!("Receiving from CTRL C channel failed:", e, 1),
     }
 
@@ -119,7 +124,7 @@ fn main() {
     println!("Disabling gadget");
     output_gamepad.gadget.clean_up_device();
 
-    println!("Everythings cleaned up :)");
+    println!("Everything is cleaned up :)");
 }
 
 fn _bt_program_flow() {
