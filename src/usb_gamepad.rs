@@ -38,9 +38,9 @@ impl Gamepad {
                         continue;
                     }
                 }
-                println!("skipped {msg_count} inputs {:?} after launch", (start_instant - Instant::now()));
+                println!("skipped {msg_count} inputs {:?} after launch", (Instant::now() - start_instant));
             } else if msg_count > 1 {
-                println!("skipped 1 input {:?} after launch", (start_instant - Instant::now()));
+                println!("skipped 1 input {:?} after launch", (Instant::now() - start_instant));
                 continue; // take only the latest inputs
             }
 
