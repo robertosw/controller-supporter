@@ -76,8 +76,9 @@ pub fn run_cmd(current_dir: &str, cmd: &str) -> Result<(), ()> {
 /// Results:
 /// - Code ran 9 996x out of 10 000x
 /// - Average deviation from interval is 18ns
+/// 
+/// This benchmark version is mainly here to experiment a bit
 fn _single_thread_interval_benchmarked(interval: Duration) {
-    // TODO transform this into a macro?
 
     // its safe to use u128 for nanoseconds
     // 2^64 ns are ~580 years
@@ -94,7 +95,7 @@ fn _single_thread_interval_benchmarked(interval: Duration) {
 
     let mut code_counter = 0;
 
-    // TODO replace with loop later
+    // replace with loop later
     while interval_counts_before < ROUNDS {
         // First run the code, which might take longer than the given interval
         // in which case this loops waits for the next interval
@@ -116,7 +117,7 @@ fn _single_thread_interval_benchmarked(interval: Duration) {
         let diff_from_interval_ns: u128 = elapsed_ns % interval_ns;
 
         let is_next_interval: bool = interval_counts_now > interval_counts_before;
-        let is_close_enough: bool = (diff_from_interval_ns as f32 / interval_ns as f32) <= 0.001; // TODO This values decides alot, tests it out
+        let is_close_enough: bool = (diff_from_interval_ns as f32 / interval_ns as f32) <= 0.001; // This values decides alot, tests it out
 
         if is_next_interval && is_close_enough {
             let expected: Instant = start + (interval * interval_counts_now as u32);

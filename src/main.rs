@@ -89,7 +89,7 @@ fn main() {
     let thread_handle_read_input = thread::spawn(move || hidapi_fn::read_bt_gamepad_input(device, input_gamepad, gamepad_clone, recv_read_input));
     println!("Input reading thread created");
 
-    // TODO Maybe remove this later, but currently this the output-writing step is reached so fast that /dev/hidg0 is not yet ready.
+    // TODO Maybe remove this later, but currently the output-writing step is reached so fast that /dev/hidg0 is not yet ready.
     // This just prevents some of the "Cannot send after transport endpoint shutdown" errors because of this ^
     thread::sleep(Duration::from_secs(1));
 

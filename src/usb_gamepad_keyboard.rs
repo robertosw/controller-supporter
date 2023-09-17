@@ -89,7 +89,6 @@ fn _write_output_once(_gamepad: &UniversalGamepad, _counter: u8, _seconds: u8) {
         }
     }
 
-    // TODO achieve a real timed interval
     thread::sleep(Duration::from_millis(150));
 
     let out: [u8; REPORT_LENGTH] = [0; REPORT_LENGTH];
