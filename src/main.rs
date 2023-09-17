@@ -7,19 +7,18 @@ extern crate version;
 extern crate termion;
 
 use ctrlc::set_handler;
-
+use flume::bounded;
+use flume::unbounded;
 use flume::Receiver;
 use flume::Sender;
-
 use hidapi::HidApi;
 use std::env;
 use std::process::exit;
 use std::process::Command;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-
+use std::sync::mpsc;
 use std::sync::Arc;
-use std::sync::mpsc::channel;
 use std::thread;
 use std::time::Duration;
 use usb_gadget::UsbGadgetDescriptor;
@@ -77,9 +76,9 @@ fn main() {
 
     // ----- Create all channels
     // These are used to tell the reading and writing threads to finish (they are normally infinite loops)
-    let (sender_ctrlc, recv_ctrlc) = channel();
-    let (sender_exit_request, recv_exit_request): (Sender<()>, Receiver<()>) = flume::bounded(1);
-    let (sender_gamepad, recv_gamepad): (Sender<UniversalGamepad>, Receiver<UniversalGamepad>) = flume::unbounded();
+    let (sender_ctrlc, recv_ctrlc) = mpsc::channel();
+    let (sender_exit_request, recv_exit_request): (Sender<()>, Receiver<()>) = bounded(1);
+    let (sender_gamepad, recv_gamepad): (Sender<UniversalGamepad>, Receiver<UniversalGamepad>) = unbounded();
 
     // ----- Setup CTRL+C handler
     ctrlc::set_handler(move || sender_ctrlc.send(()).expect("Could not send signal on channel.")).expect("Error setting Ctrl-C handler");
