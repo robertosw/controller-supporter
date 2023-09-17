@@ -2,27 +2,19 @@ If you have any ideas or know of anything I should avoid or be careful with, don
 
 # Current state
 
-- Bluetooth connection was manually established, but some code already exists for automatic detection
-- Reading and understanding all buttons from bluetooth-connected dual sense (ps5) gamepad works
-- configuring the RPi as a gadget *seems* to work
-  - Linux detects (`lsusb`) the RPi as the simulated gamepad, but `dmesg` shows some errors that were not shown on previous linux kernels (I recently switched my distro and with this from 5.15 to 6.1)
-  - `dmesg` errors:
-    ```
-    usb 1-2: new high-speed USB device number 10 using xhci_hcd
-    usb 1-2: New USB device found, idVendor=054c, idProduct=0ce6, bcdDevice= 1.00
-    usb 1-2: New USB device strings: Mfr=1, Product=2, SerialNumber=3
-    usb 1-2: Product: Wireless Controller
-    usb 1-2: Manufacturer: Sony Interactive Entertainment
-    playstation 0003:054C:0CE6.0013: hidraw4: USB HID v1.01 Gamepad [Sony Interactive Entertainment Wireless Controller] on usb-0000:03:00.3-2/input0
-    playstation 0003:054C:0CE6.0013: Invalid reportID received, expected 9 got 0
-    playstation 0003:054C:0CE6.0013: Failed to retrieve DualSense pairing info: -22
-    playstation 0003:054C:0CE6.0013: Failed to get MAC address from DualSense
-    playstation 0003:054C:0CE6.0013: Failed to create dualsense.
-    playstation: probe of 0003:054C:0CE6.0013 failed with error -22
-    ```
-    - These might be fixable if I actually create all audio functions the real controller has, but I dont think thats the problem
+- **Bluetooth** connection has to established manually before programm start
+- **Reading input** from bluetooth-connected dual sense (ps5) gamepad works, see supported events below
+- **Gadget mode** *seems* to work
+  - Linux detects the RPi as the simulated gamepad (using `lsusb`), but `dmesg` shows [some errors](./doc/Development.md#dmesg-errors-on-linux-61) that were not shown on previous linux kernels (5.15 worked, 6.1 doesnt)
+  - These might be fixable if I actually create all audio functions the real controller has, but I dont think thats the problem
   - Windows 10 detects the Raspberry Pi as a DualSense gamepad without showing any errors in the Device Manager. 
-- Gamepad-Bridge can correctly simulate joystick and trigger movement for Steams Controller-Test (on Win10)
+- **Output to Host:** Every input of the PS5 Gamepad that is supported, is being written into the device file correctly
+  - Supported inputs: all buttons, joystick movement and press, triggers, bumpers and touchpad pressed (without location)
+  - Missing: Touchpad touch location, **vibration**, leds, battery state readout
+
+**In short:**
+> - Controller can be used normally in a game on Steam (or other games that support PS controllers natively on Win10)
+> - Vibration not supported
 
 <br>
 
