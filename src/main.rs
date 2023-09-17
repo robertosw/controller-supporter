@@ -47,6 +47,7 @@ use crate::usb_gamepad_ps5::DUALSENSE;
 /* TODO
    The input and output thread are taking up nearly 100% cpu all the time
    It would be better if input thread would wait for bt input, and output thread would wait for new data from input thread (maybe use channels)
+   This could be done with condvar or channels
 */
 
 fn main() {
@@ -56,7 +57,6 @@ fn main() {
     // ----- Enable Gadget
     // If this is done at a later point, the host might run into errors when trying to classify this device and turn it off
     // TODO output_gamepad should be expected from a command argument or set to a default if not given
-
     let output_gamepad: &Gamepad = &DUALSENSE;
     output_gamepad.gadget.configure_device();
 
@@ -91,8 +91,11 @@ fn main() {
     // ----- Reading input of BT gamepad
     let universal_gamepad: Arc<Mutex<UniversalGamepad>> = Arc::new(Mutex::new(UniversalGamepad::nothing_pressed()));
     let gamepad_clone = universal_gamepad.clone(); // Cloning has to be done outside of the closure
-    let thread_handle_read_input = thread::spawn(move || hidapi_fn::read_bt_gamepad_input(device, input_gamepad, gamepad_clone, recv_read_input));
-    println!("Input reading thread created");
+    let thread_handle_read_input = thread::Builder::new()
+        .name("input".to_string())
+        .spawn(move || hidapi_fn::read_bt_gamepad_input(device, input_gamepad, gamepad_clone, recv_read_input))
+        .expect("creating input thread failed");
+    println!("Input thread created");
 
     // TODO Maybe remove this later, but currently the output-writing step is reached so fast that /dev/hidg0 is not yet ready.
     // This just prevents some of the "Cannot send after transport endpoint shutdown" errors because of this ^
@@ -100,8 +103,10 @@ fn main() {
 
     // ----- Write Output to gadget
     let gamepad_clone = universal_gamepad.clone();
-    let thread_handle_write_output =
-        thread::spawn(move || output_gamepad.write_to_gadget_intervalic(gamepad_clone, Duration::from_millis(1), 0.01, recv_write_output));
+    let thread_handle_write_output = thread::Builder::new()
+        .name("output".to_string())
+        .spawn(move || output_gamepad.write_to_gadget_intervalic(gamepad_clone, Duration::from_millis(1), 0.01, recv_write_output))
+        .expect("creating output thread failed");
     println!("Output thread created");
 
     // ----- Clean up (if Ctrl + C is pressed)
