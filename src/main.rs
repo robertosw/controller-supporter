@@ -45,8 +45,6 @@ use crate::usb_gamepad_ps5::DUALSENSE;
 //  if working on native os as non root: (from /gamepad-bridge)
 //  - build & run   `cargo build --release && sudo chown root:root target/release/gamepad-bridge && sudo chmod +s target/release/gamepad-bridge && /target/release/gamepad-bridge`
 
-// TODO Currently the PS5 Logo Button is kind of bugged. Input delay is perfect, but somethings wrong on the way from output thread to steam
-
 fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");
