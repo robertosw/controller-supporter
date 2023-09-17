@@ -1,13 +1,12 @@
-use ::hidapi::{BusType, HidApi};
-use hidapi::{DeviceInfo, HidDevice};
-use std::{
-    sync::{
-        mpsc::{Receiver, TryRecvError},
-        Arc, Mutex,
-    },
-    thread,
-    time::Duration,
-};
+use ::hidapi::BusType;
+use ::hidapi::HidApi;
+use flume::Receiver;
+use flume::Sender;
+use flume::TryRecvError;
+use hidapi::DeviceInfo;
+use hidapi::HidDevice;
+use std::thread;
+use std::time::Duration;
 
 use crate::{universal_gamepad::UniversalGamepad, usb_gamepad::Gamepad};
 
@@ -119,7 +118,7 @@ fn _get_bluetooth_hid_devices(api: &HidApi) -> Result<Vec<&DeviceInfo>, ()> {
     return Ok(bluetooth_devices);
 }
 
-pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, universal_gamepad: Arc<Mutex<UniversalGamepad>>, recv: Receiver<bool>) {
+pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, sender: Sender<UniversalGamepad>, receiver_exit_request: Receiver<()>) {
     // if set to false, calls to read may return nothing, but also dont block
     match device.set_blocking_mode(false) {
         Ok(_) => (),
@@ -130,8 +129,12 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, univers
     let mut buf: [u8; 100] = [0 as u8; 100];
 
     loop {
-        match recv.try_recv() {
-            Ok(_) | Err(TryRecvError::Disconnected) => break,
+        // did the main thread request that this thread stops?
+        match receiver_exit_request.try_recv() {
+            Ok(_) | Err(TryRecvError::Disconnected) => {
+                sender.downgrade();
+                break;
+            }
             Err(TryRecvError::Empty) => (),
         }
 
@@ -141,8 +144,8 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, univers
         match device.read_timeout(&mut buf[..], 0) {
             Ok(value) => match value.cmp(&min_size) {
                 std::cmp::Ordering::Greater => {
-                    let mut gamepad_locked = universal_gamepad.lock().expect("Locking Arc<Mutex<UniversalGamepad>> failed!");
-                    *gamepad_locked = input_gamepad.bt_input_to_universal_gamepad(&buf.to_vec());
+                    let gamepad = input_gamepad.bt_input_to_universal_gamepad(&buf.to_vec());
+                    sender.send(gamepad);
                 }
                 _ => continue,
             },

@@ -1,13 +1,10 @@
+use flume::Receiver;
+use flume::TryRecvError;
+use std::{io::Write, process::exit, thread, time::Instant};
+use std::fs::File;
 use std::{
-    fs::File,
-    io::Write,
-    process::exit,
-    sync::{
-        mpsc::{Receiver, TryRecvError},
-        Arc, Mutex,
-    },
-    thread,
-    time::{Duration, Instant},
+    sync::{Arc, Mutex},
+    time::Duration,
 };
 
 use crate::{print_error_and_exit, universal_gamepad::UniversalGamepad, usb_gadget::UsbGadgetDescriptor};
@@ -25,14 +22,17 @@ impl Gamepad {
         return (self.bt_input_to_universal_gamepad)(&bt_input);
     }
 
+    /// - Waits for a new UniversalGamepad, evaluating only the latest message in the channel, exits automatically if the channel is closed
     /// - Transforms the given `UniversalGamepad` into the correct output array for this `Gamepad`
     /// - Attempts to write the entire output array into the file /dev/hidg0
-    pub fn write_to_gadget_continously(&self, universal_gamepad: Arc<Mutex<UniversalGamepad>>) -> ! {
-        loop {
-            let usb_output: Vec<u8> = {
-                let gamepad_locked = universal_gamepad.lock().expect("Locking Arc<Mutex<UniversalGamepad>> failed!");
-                self._universal_gamepad_to_usb_output(&gamepad_locked)
-            };
+    pub fn write_to_gadget_continously(&self, receiver: Receiver<UniversalGamepad>) {
+        for gamepad in receiver.iter() {
+            if receiver.len() > 1 {
+                println!("skipped one input");
+                continue; // take only the latest inputs
+            }
+
+            let usb_output: Vec<u8> = self._universal_gamepad_to_usb_output(&gamepad);
 
             let mut hidg0 = match File::options().write(true).append(false).open("/dev/hidg0") {
                 Ok(file) => file,
@@ -43,8 +43,6 @@ impl Gamepad {
                 Ok(_) => (),
                 Err(err) => println!("write to hidg0 failed: {:?}", err),
             }
-
-            thread::sleep(Duration::from_micros(500));
         }
     }
 
@@ -112,7 +110,7 @@ impl Gamepad {
                 usb_output.clear();
             }
 
-            thread::sleep(Duration::from_nanos(1)); 
+            thread::sleep(Duration::from_nanos(1));
         }
     }
 

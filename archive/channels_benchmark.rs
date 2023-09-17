@@ -2,6 +2,8 @@ extern crate termion;
 
 use flume;
 
+// Time delay from send to recieve is ~ 15µs on my notebook
+
 fn thread1(send: flume::Sender<(Instant, UniversalGamepad)>) -> ! {
     loop {
         let now = Instant::now();
