@@ -4,7 +4,7 @@ use std::{
     process::exit,
     sync::{Arc, Mutex},
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use crate::{print_error_and_exit, universal_gamepad::UniversalGamepad, usb_gadget::UsbGadgetDescriptor};
@@ -42,6 +42,68 @@ impl Gamepad {
             }
 
             thread::sleep(Duration::from_micros(500));
+        }
+    }
+
+    /// To adjust how precice the interval has to be "hit", `max_deviation` can be used.
+    ///
+    /// - `max_deviation`:
+    ///     - using `1` would mean, that the interval is practically disregarded and writing to file is done as soon as possible
+    ///     - using `0` would nearly never write to file, because this loop itself has a bit of runtime and never hits the interval with 0ns accuracy
+    ///     - useful values are
+    ///         - `~ 0.05`, if its important that writing is done nearly every interval
+    ///         - `< 0.001`, if its important that the interval is precicely hit
+    pub fn write_to_gadget_intervalic(&self, universal_gamepad: Arc<Mutex<UniversalGamepad>>, interval: Duration, max_deviation: f32) -> ! {
+        // its safe to use u128 for nanoseconds
+        // 2^64 ns are ~580 years
+        // so 2^128 are 580² years
+
+        let start: Instant = Instant::now();
+        let interval_ns = interval.as_nanos();
+        let mut interval_counts_before: u128 = 0;
+
+        let mut code_ran: bool = false;
+        let mut usb_output: Vec<u8> = Vec::new();
+
+        loop {
+            {
+                if code_ran == false {
+                    // program code that might not run fast enough for interval here
+                    let gamepad_locked = universal_gamepad.lock().expect("Locking Arc<Mutex<UniversalGamepad>> failed!");
+                    usb_output = self._universal_gamepad_to_usb_output(&gamepad_locked);
+                }
+                code_ran = true;
+            }
+
+            // Is this loop still "on time"?
+            let now: Instant = Instant::now();
+            let elapsed_ns: u128 = (now - start).as_nanos();
+            let interval_counts_now: u128 = elapsed_ns / interval_ns;
+
+            // By how many ns does the current run deviate from the cycle
+            let diff_from_interval_ns: u128 = elapsed_ns % interval_ns;
+
+            let is_next_interval: bool = interval_counts_now > interval_counts_before;
+            let is_close_enough: bool = (diff_from_interval_ns as f32 / interval_ns as f32) <= max_deviation;
+
+            if is_next_interval && is_close_enough {
+                {
+                    // code that is supposed to be timed, herek
+                    let mut hidg0 = match File::options().write(true).append(false).open("/dev/hidg0") {
+                        Ok(file) => file,
+                        Err(err) => print_error_and_exit!("Could not open file hidg0", err, 1),
+                    };
+
+                    match hidg0.write_all(&usb_output) {
+                        Ok(_) => (),
+                        Err(err) => println!("write to hidg0 failed: {:?}", err),
+                    }
+                }
+
+                interval_counts_before = interval_counts_now;
+                code_ran = false;
+                usb_output.clear();
+            }
         }
     }
 

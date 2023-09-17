@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unreachable_code)]
 
 #[macro_use]
 extern crate version;
@@ -8,6 +8,7 @@ extern crate termion;
 
 use ctrlc::set_handler;
 use hidapi::HidApi;
+use rand::Rng;
 use std::env;
 use std::process::exit;
 use std::process::Command;
@@ -17,6 +18,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
+use std::time::Instant;
 use usb_gadget::UsbGadgetDescriptor;
 
 mod bluetooth_fn;
@@ -48,6 +50,7 @@ fn main() {
     // ----- Enable Gadget
     // If this is done later, the host might run into errors when trying to classify this device and turn it off
     // TODO output_gamepad should be expected from a command argument or set to a default if not given
+
     let output_gamepad: &Gamepad = &DUALSENSE;
     // output_gamepad.gadget.configure_device();
 
@@ -80,13 +83,108 @@ fn main() {
 
     // ----- Write Output to gadget
     let gamepad_clone = universal_gamepad.clone();
-    let thread_handle_write_output = thread::spawn(move || output_gamepad.write_to_gadget_continously(gamepad_clone));
+    // let thread_handle_write_output = thread::spawn(move || output_gamepad.write_to_gadget_continously(gamepad_clone));
+    let thread_handle_write_output = thread::spawn(move || output_gamepad.write_to_gadget_intervalic(gamepad_clone, Duration::from_millis(4), 0.001));
 
     // ----- Clean up (if Ctrl + C is pressed)
     // TODO move CTRL + C handling from BT to here
     // TODO undo gadget config completely, so that this program can be rerun without errors from configure_device()
     thread_handle_read_input.join().unwrap();
     thread_handle_write_output.join().unwrap();
+}
+
+/// Tested values:
+/// - Interval: 1000 µs
+/// - Rounds: 10 000x
+/// - Code max "runtime": 500 µs = interval / 2   <br>
+/// (its not actually running, just sleeping)
+///
+/// Results:
+/// - Code ran 9 996x out of 10 000x
+/// - Average deviation from interval is 18ns
+fn _single_thread_interval_benchmarked(interval: Duration) {
+    // TODO transform this into a macro?
+
+    // its safe to use u128 for nanoseconds
+    // 2^64 ns are ~580 years
+    // so 2^128 are 580² years
+
+    let start: Instant = Instant::now();
+    let interval_ns = interval.as_nanos();
+    let mut interval_counts_before: u128 = 0;
+    let mut code_ran: bool = false;
+
+    let mut diffs: Vec<Duration> = Vec::new();
+
+    const ROUNDS: u128 = 100000;
+
+    let mut code_counter = 0;
+
+    // TODO replace with loop later
+    while interval_counts_before < ROUNDS {
+        // First run the code, which might take longer than the given interval
+        // in which case this loops waits for the next interval
+        {
+            if code_ran == false {
+                // program code that should be run once per cycle here
+
+                _random_wait(Duration::from_micros(350), Duration::from_micros(500));
+                code_counter += 1;
+            }
+            code_ran = true;
+        }
+
+        let now: Instant = Instant::now();
+        let elapsed_ns: u128 = (now - start).as_nanos();
+        let interval_counts_now: u128 = elapsed_ns / interval_ns;
+
+        // By how many ns does the current run deviate from the cycle
+        let diff_from_interval_ns: u128 = elapsed_ns % interval_ns;
+
+        let is_next_interval: bool = interval_counts_now > interval_counts_before;
+        let is_close_enough: bool = (diff_from_interval_ns as f32 / interval_ns as f32) <= 0.001; // TODO This values decides alot, tests it out
+
+        if is_next_interval && is_close_enough {
+            let expected: Instant = start + (interval * interval_counts_now as u32);
+            diffs.push(now - expected);
+
+            {
+                // code that is supposed to be timed, here
+            }
+
+            interval_counts_before = interval_counts_now;
+            code_ran = false;
+        }
+    }
+
+    //  benchmark results
+
+    let mut avg_ns = 0;
+    let mut avg_perc: f64 = 0.0;
+
+    for difference in diffs {
+        avg_ns += difference.as_nanos();
+        let error_percent: f64 = (difference.as_nanos() as f64 / interval.as_nanos() as f64) * 100.0;
+        avg_perc += error_percent;
+    }
+
+    println!("");
+    println!("Code ran {}x, target was {}x", code_counter, ROUNDS);
+    println!("Avg ABS  {} ns", avg_ns / ROUNDS);
+    println!("Avg PERC {:2.3?} %", avg_perc / ROUNDS as f64);
+}
+
+fn _random_wait(min: Duration, max: Duration) {
+    let min_ns = min.as_nanos() as u64;
+    let max_ns = max.as_nanos() as u64;
+
+    let range: std::ops::RangeInclusive<u64> = min_ns..=max_ns;
+
+    let mut rng = rand::thread_rng();
+    let wait_time = Duration::from_nanos(rng.gen_range(range));
+
+    // println!("waiting for {:?}", wait_time);
+    thread::sleep(wait_time);
 }
 
 // Ideas for program flow
