@@ -171,3 +171,105 @@ fn _bt_program_flow() {
 
     thread_handle.join().unwrap();
 }
+
+// for benchmarking in tests use: cargo test -- --show-output
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::usb_gamepad::OUTPUT_GAMEPADS;
+    use flume::{bounded, unbounded, Sender};
+    use std::time::Instant;
+
+    #[test]
+    fn bench_all_gamepads_bt_input_to_gamepad() {
+        const RUNS: u32 = 1000000;
+
+        println!("");
+        println!("Benchmark BT input -> UniversalGamepad output");
+        println!("{} runs per gamepad", RUNS);
+
+        for gamepad in OUTPUT_GAMEPADS {
+            // Skip unfinished gamepads
+            if gamepad.is_supported == false {
+                println!("{} skipped, not supported", gamepad.display_name);
+                continue;
+            }
+
+            // prepare fake input
+            let bt_input: Vec<u8> = vec![0; gamepad.min_bt_report_size];
+
+            // prepare benchmark value
+            let mut counter: u32 = 0;
+            let mut times: Duration = Duration::from_secs(0);
+
+            while counter < RUNS {
+                let before = Instant::now();
+
+                // It might be better not to use "let _ =" because this never assignes the output
+                // and could result in faster but unrealistic runtime
+                let _universal_gamepad = gamepad.bt_input_to_universal_gamepad(&bt_input);
+
+                let diff = Instant::now() - before;
+                times += diff;
+                counter += 1;
+            }
+            let avg = times / RUNS;
+            println!("{} took: {:4.2?}", gamepad.display_name, avg);
+        }
+    }
+
+    #[test]
+    fn bench_all_gamepads_gamepad_to_usb() {
+        const RUNS: u32 = 1000000;
+
+        println!("");
+        println!("Benchmark UniversalGamepad input -> Usb gadget output");
+        println!("{} runs per gamepad", RUNS);
+
+        for gamepad in OUTPUT_GAMEPADS {
+            // Skip unfinished gamepads
+            if gamepad.is_supported == false {
+                println!("{} skipped, not supported", gamepad.display_name);
+                continue;
+            }
+
+            // prepare fake input
+            let universal_gamepad = UniversalGamepad::nothing_pressed();
+
+            // prepare benchmark value
+            let mut counter: u32 = 0;
+            let mut times: Duration = Duration::from_secs(0);
+
+            while counter < RUNS {
+                let before = Instant::now();
+
+                // It might be better not to use "let _ =" because this never assignes the output
+                // and could result in faster but unrealistic runtime
+                let _usb_output = gamepad.universal_gamepad_to_usb_output(&universal_gamepad);
+
+                let diff = Instant::now() - before;
+                times += diff;
+                counter += 1;
+            }
+            let avg = times / RUNS;
+            println!("{} took: {:4.2?}", gamepad.display_name, avg);
+        }
+    }
+
+    // #[test]
+    // fn bench_all_gamepads_with_channels() {
+    //     let (sender_exit_request, recv_exit_request): (Sender<()>, Receiver<()>) = bounded(1);
+    //     let (sender_gamepad, recv_gamepad): (Sender<UniversalGamepad>, Receiver<UniversalGamepad>) = unbounded();
+
+    //     // create fake input
+    //     let thread_handle_input = thread::Builder::new()
+    //         .name("input".to_string())
+    //         .spawn(move || hidapi_fn::read_bt_gamepad_input(device, input_gamepad, sender_gamepad, recv_exit_request))
+    //         .expect("creating input thread failed");
+
+    //     // send to other thread
+
+    //     // handle input
+    // }
+}

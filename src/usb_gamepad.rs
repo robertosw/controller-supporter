@@ -12,7 +12,7 @@ use crate::usb_gamepad_ps4::DUALSHOCK;
 use crate::usb_gamepad_ps5::DUALSENSE;
 use crate::{print_error_and_exit, universal_gamepad::UniversalGamepad, usb_gadget::UsbGadgetDescriptor};
 
-const OUTPUT_GAMEPADS: [&OutputGamepad; 2] = [&DUALSENSE, &DUALSHOCK];
+pub const OUTPUT_GAMEPADS: [&OutputGamepad; 2] = [&DUALSENSE, &DUALSHOCK];
 
 pub struct OutputGamepad {
     pub gadget: UsbGadgetDescriptor,
@@ -228,87 +228,4 @@ fn _display_supported_gamepads() -> ! {
         }
     }
     exit(1);
-}
-
-// for benchmarking in tests use: cargo test -- --show-output
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn bench_all_gamepads_bt_input_to_gamepad() {
-        const RUNS: u32 = 1000000;
-
-        println!("");
-        println!("Benchmark BT input -> UniversalGamepad output");
-        println!("{} runs per gamepad", RUNS);
-
-        for gamepad in OUTPUT_GAMEPADS {
-            // Skip unfinished gamepads
-            if gamepad.is_supported == false {
-                println!("{} skipped, not supported", gamepad.display_name);
-                continue;
-            }
-
-            // prepare fake input
-            let bt_input: Vec<u8> = vec![0; gamepad.min_bt_report_size];
-
-            // prepare benchmark value
-            let mut counter: u32 = 0;
-            let mut times: Duration = Duration::from_secs(0);
-
-            while counter < RUNS {
-                let before = Instant::now();
-
-                // It might be better not to use "let _ =" because this never assignes the output
-                // and could result in faster but unrealistic runtime
-                let _universal_gamepad = gamepad.bt_input_to_universal_gamepad(&bt_input);
-
-                let diff = Instant::now() - before;
-                times += diff;
-                counter += 1;
-            }
-            let avg = times / RUNS;
-            println!("{} took: {:4.2?}", gamepad.display_name, avg);
-        }
-    }
-
-    #[test]
-    fn bench_all_gamepads_gamepad_to_usb() {
-        const RUNS: u32 = 1000000;
-
-        println!("");
-        println!("Benchmark UniversalGamepad input -> Usb gadget output");
-        println!("{} runs per gamepad", RUNS);
-
-        for gamepad in OUTPUT_GAMEPADS {
-            // Skip unfinished gamepads
-            if gamepad.is_supported == false {
-                println!("{} skipped, not supported", gamepad.display_name);
-                continue;
-            }
-
-            // prepare fake input
-            let universal_gamepad = UniversalGamepad::nothing_pressed();
-
-            // prepare benchmark value
-            let mut counter: u32 = 0;
-            let mut times: Duration = Duration::from_secs(0);
-
-            while counter < RUNS {
-                let before = Instant::now();
-
-                // It might be better not to use "let _ =" because this never assignes the output
-                // and could result in faster but unrealistic runtime
-                let _usb_output = gamepad.universal_gamepad_to_usb_output(&universal_gamepad);
-
-                let diff = Instant::now() - before;
-                times += diff;
-                counter += 1;
-            }
-            let avg = times / RUNS;
-            println!("{} took: {:4.2?}", gamepad.display_name, avg);
-        }
-    }
 }
