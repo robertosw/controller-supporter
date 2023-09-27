@@ -4,6 +4,10 @@ use crate::usb_gamepad::OutputGamepad;
 use crate::UsbGadgetDescriptor;
 
 pub const DUALSENSE: OutputGamepad = OutputGamepad {
+    min_bt_report_size: 12,
+    is_supported: true,
+    associated_args: ["ps5", "dualsense"],
+    display_name: "PS5 DualSense",
     gadget: UsbGadgetDescriptor {
         bcd_usb: 0x200,
         b_device_class: 0,
@@ -196,7 +200,6 @@ pub const DUALSENSE: OutputGamepad = OutputGamepad {
             ],
         },
     },
-    min_bt_report_size: 12,
     bt_input_to_universal_gamepad: _bt_input_to_universal_gamepad,
     universal_gamepad_to_usb_output: _universal_gamepad_to_usb_output,
 };
