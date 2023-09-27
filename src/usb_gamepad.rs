@@ -12,9 +12,9 @@ use crate::usb_gamepad_ps4::DUALSHOCK;
 use crate::usb_gamepad_ps5::DUALSENSE;
 use crate::{print_error_and_exit, universal_gamepad::UniversalGamepad, usb_gadget::UsbGadgetDescriptor};
 
-pub const OUTPUT_GAMEPADS: [&OutputGamepad; 2] = [&DUALSENSE, &DUALSHOCK];
+pub const OUTPUT_GAMEPADS: [&Gamepad; 2] = [&DUALSENSE, &DUALSHOCK];
 
-pub struct OutputGamepad {
+pub struct Gamepad {
     pub gadget: UsbGadgetDescriptor,
 
     /// This depends on how the function bt_input_to_universal_gamepad() works
@@ -32,11 +32,11 @@ pub struct OutputGamepad {
     pub bt_input_to_universal_gamepad: fn(&Vec<u8>) -> UniversalGamepad,
     pub universal_gamepad_to_usb_output: fn(&UniversalGamepad) -> Vec<u8>,
 }
-impl OutputGamepad {
+impl Gamepad {
     /// Checks if there has been one command line argument given, exits with descriptive error if not
     ///
     /// If argument was given, checks if it contains a string describing any supported gamepad
-    pub fn from_cmdline_args() -> &'static OutputGamepad {
+    pub fn from_cmdline_args() -> &'static Gamepad {
         let args: Vec<String> = env::args().collect();
 
         if args.len() != 2 {

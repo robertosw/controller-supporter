@@ -6,7 +6,7 @@ use flume::TryRecvError;
 use hidapi::DeviceInfo;
 use hidapi::HidDevice;
 
-use crate::{universal_gamepad::UniversalGamepad, usb_gamepad::OutputGamepad};
+use crate::{universal_gamepad::UniversalGamepad, usb_gamepad::Gamepad};
 
 #[derive(Debug)]
 pub enum HidApiGamepadError {
@@ -116,7 +116,7 @@ fn _get_bluetooth_hid_devices(api: &HidApi) -> Result<Vec<&DeviceInfo>, ()> {
     return Ok(bluetooth_devices);
 }
 
-pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &OutputGamepad, sender: Sender<UniversalGamepad>, receiver_exit_request: Receiver<()>) {
+pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, sender: Sender<UniversalGamepad>, receiver_exit_request: Receiver<()>) {
     // if set to false, calls to read may return nothing, but also dont block
     match device.set_blocking_mode(true) {
         Ok(_) => (),
