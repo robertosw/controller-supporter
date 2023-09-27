@@ -1,6 +1,10 @@
 use crate::{universal_gamepad::UniversalGamepad, usb_gadget::*, usb_gamepad::OutputGamepad};
 
 pub const DUALSHOCK: OutputGamepad = OutputGamepad {
+    min_bt_report_size: 20,
+    is_supported: false,
+    associated_args: ["ps4", "dualshock"],
+    display_name: "PS4 DualShock",
     gadget: UsbGadgetDescriptor {
         bcd_usb: 0x200,
         b_device_class: 0,
@@ -280,13 +284,11 @@ pub const DUALSHOCK: OutputGamepad = OutputGamepad {
             ],
         },
     },
-    min_bt_report_size: 20,
     bt_input_to_universal_gamepad: _bt_input_to_universal_gamepad_dualsense,
     universal_gamepad_to_usb_output: _universal_gamepad_to_usb_output_dualsense,
 };
 
 fn _bt_input_to_universal_gamepad_dualsense(_bt_input: &Vec<u8>) -> UniversalGamepad {
-
     todo!();
 
     // TODO set min_bt_report_size correctly
