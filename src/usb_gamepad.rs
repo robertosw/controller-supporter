@@ -273,4 +273,42 @@ mod tests {
             println!("{} took: {:4.2?}", gamepad.display_name, avg);
         }
     }
+
+    #[test]
+    fn bench_all_gamepads_gamepad_to_usb() {
+        const RUNS: u32 = 1000000;
+
+        println!("");
+        println!("Benchmark UniversalGamepad input -> Usb gadget output");
+        println!("{} runs per gamepad", RUNS);
+
+        for gamepad in OUTPUT_GAMEPADS {
+            // Skip unfinished gamepads
+            if gamepad.is_supported == false {
+                println!("{} skipped, not supported", gamepad.display_name);
+                continue;
+            }
+
+            // prepare fake input
+            let universal_gamepad = UniversalGamepad::nothing_pressed();
+
+            // prepare benchmark value
+            let mut counter: u32 = 0;
+            let mut times: Duration = Duration::from_secs(0);
+
+            while counter < RUNS {
+                let before = Instant::now();
+
+                // It might be better not to use "let _ =" because this never assignes the output
+                // and could result in faster but unrealistic runtime
+                let _usb_output = gamepad.universal_gamepad_to_usb_output(&universal_gamepad);
+
+                let diff = Instant::now() - before;
+                times += diff;
+                counter += 1;
+            }
+            let avg = times / RUNS;
+            println!("{} took: {:4.2?}", gamepad.display_name, avg);
+        }
+    }
 }
