@@ -33,7 +33,7 @@ impl OutputGamepad {
             println!("");
             println!("Supported Gamepads are:");
             println!("PS5 DualSense: 'ps5' or 'dualsense'");
-            println!("PS4 DualShock: 'ps4' or 'dualshock'");
+            // println!("PS4 DualShock: 'ps4' or 'dualshock'");
             exit(1);
         }
 
@@ -43,14 +43,15 @@ impl OutputGamepad {
             print!("Output gamepad is PS5 DualSense");
             return &DUALSENSE;
         } else if arg.contains("ps4") || arg.contains("dualshock") {
-            print!("Output gamepad is PS4 DualShock");
-            return &DUALSHOCK;
+            println!("The PS4 gamepad is not yet tested and supported");
+            // return &DUALSHOCK;
+            exit(1);
         } else {
             println!("No supported gamepad is associated with the input '{}'", arg);
             println!("");
             println!("Supported gamepads are:");
             println!("PS5 DualSense: 'ps5' or 'dualsense'");
-            println!("PS4 DualShock: 'ps4' or 'dualshock'");
+            // println!("PS4 DualShock: 'ps4' or 'dualshock'");
             exit(1);
         }
     }
