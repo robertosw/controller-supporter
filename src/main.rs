@@ -45,6 +45,8 @@ use crate::usb_gamepad_ps5::DUALSENSE;
 //  if working on native os as non root: (from /gamepad-bridge)
 //  - build & run   `cargo build --release && sudo chown root:root target/release/gamepad-bridge && sudo chmod +s target/release/gamepad-bridge && /target/release/gamepad-bridge`
 
+// for benchmarking in tests use: cargo test -- --show-output
+
 fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");
