@@ -35,7 +35,7 @@ mod usb_gamepad_ps5;
 
 use crate::bluetooth_fn::*;
 use crate::universal_gamepad::UniversalGamepad;
-use crate::usb_gamepad::Gamepad;
+use crate::usb_gamepad::OutputGamepad;
 use crate::usb_gamepad_ps4::DUALSHOCK;
 use crate::usb_gamepad_ps5::DUALSENSE;
 
@@ -51,8 +51,7 @@ fn main() {
 
     // ----- Enable Gadget
     // If this is done at a later point, the host might run into errors when trying to classify this device and turn it off
-    // TODO output_gamepad should be expected from a command argument or set to a default if not given
-    let output_gamepad: &Gamepad = &DUALSENSE;
+    let output_gamepad: &OutputGamepad = OutputGamepad::from_cmdline_args();
     output_gamepad.gadget.configure_device();
     println!("Gadget enabled");
 
@@ -74,10 +73,10 @@ fn main() {
         Err(err) => print_error_and_exit!("Error getting HidApi access", err, 2),
     };
 
-    let (device, input_gamepad): (hidapi::HidDevice, &Gamepad) = match hidapi_fn::get_hid_gamepad(&api) {
+    let (device, input_gamepad): (hidapi::HidDevice, &OutputGamepad) = match hidapi_fn::get_hid_gamepad(&api) {
         Ok((device, model)) => match model {
-            hidapi_fn::GamepadModel::PS5 => (device, &DUALSENSE),
-            hidapi_fn::GamepadModel::PS4 => (device, &DUALSHOCK),
+            hidapi_fn::SupportedInputGamepads::Ps5DualSense => (device, &DUALSENSE),
+            hidapi_fn::SupportedInputGamepads::PS4DualShock => (device, &DUALSHOCK),
         },
         Err(err) => print_error_and_exit!("Error accessing connected hid gamepad", err, 1),
     };

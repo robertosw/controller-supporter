@@ -1,9 +1,9 @@
 use crate::universal_gamepad::*;
 use crate::usb_gadget::*;
-use crate::usb_gamepad::Gamepad;
+use crate::usb_gamepad::OutputGamepad;
 use crate::UsbGadgetDescriptor;
 
-pub const DUALSENSE: Gamepad = Gamepad {
+pub const DUALSENSE: OutputGamepad = OutputGamepad {
     gadget: UsbGadgetDescriptor {
         bcd_usb: 0x200,
         b_device_class: 0,
