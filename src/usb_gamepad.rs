@@ -1,5 +1,6 @@
 use flume::Receiver;
 use flume::TryRecvError;
+use std::env;
 use std::fs::File;
 use std::{io::Write, process::exit, thread, time::Instant};
 use std::{
@@ -7,9 +8,11 @@ use std::{
     time::Duration,
 };
 
+use crate::usb_gamepad_ps4::DUALSHOCK;
+use crate::usb_gamepad_ps5::DUALSENSE;
 use crate::{print_error_and_exit, universal_gamepad::UniversalGamepad, usb_gadget::UsbGadgetDescriptor};
 
-pub struct Gamepad {
+pub struct OutputGamepad {
     pub gadget: UsbGadgetDescriptor,
 
     /// This depends on how the function bt_input_to_universal_gamepad() works
@@ -17,7 +20,41 @@ pub struct Gamepad {
     pub bt_input_to_universal_gamepad: fn(&Vec<u8>) -> UniversalGamepad,
     pub universal_gamepad_to_usb_output: fn(&UniversalGamepad) -> Vec<u8>,
 }
-impl Gamepad {
+impl OutputGamepad {
+    /// Checks if there has been one command line argument given, exits with descriptive error if not
+    /// 
+    /// If argument was given, checks if it contains a string describing any supported gamepad
+    pub fn from_cmdline_args() -> &'static OutputGamepad {
+        let args: Vec<String> = env::args().collect();
+
+        if args.len() != 2 {
+            println!("One command line argument was expected to describe the desired output gamepad");
+            println!("If run with cargo, use: cargo run -- <argument>");
+            println!("");
+            println!("Supported Gamepads are:");
+            println!("PS5 DualSense: 'ps5' or 'dualsense'");
+            println!("PS4 DualShock: 'ps4' or 'dualshock'");
+            exit(1);
+        }
+
+        let arg: &String = &args[1];
+
+        if arg.contains("ps5") || arg.contains("dualsense") {
+            print!("Output gamepad is PS5 DualSense");
+            return &DUALSENSE;
+        } else if arg.contains("ps4") || arg.contains("dualshock") {
+            print!("Output gamepad is PS4 DualShock");
+            return &DUALSHOCK;
+        } else {
+            println!("No supported gamepad is associated with the input '{}'", arg);
+            println!("");
+            println!("Supported gamepads are:");
+            println!("PS5 DualSense: 'ps5' or 'dualsense'");
+            println!("PS4 DualShock: 'ps4' or 'dualshock'");
+            exit(1);
+        }
+    }
+
     pub fn bt_input_to_universal_gamepad(&self, bt_input: &Vec<u8>) -> UniversalGamepad {
         return (self.bt_input_to_universal_gamepad)(&bt_input);
     }

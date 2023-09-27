@@ -1,6 +1,6 @@
-use crate::{universal_gamepad::UniversalGamepad, usb_gadget::*, usb_gamepad::Gamepad};
+use crate::{universal_gamepad::UniversalGamepad, usb_gadget::*, usb_gamepad::OutputGamepad};
 
-pub const DUALSHOCK: Gamepad = Gamepad {
+pub const DUALSHOCK: OutputGamepad = OutputGamepad {
     gadget: UsbGadgetDescriptor {
         bcd_usb: 0x200,
         b_device_class: 0,
