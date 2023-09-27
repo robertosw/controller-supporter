@@ -15,9 +15,9 @@ pub enum HidApiGamepadError {
     OpenFailed,
 }
 
-pub enum GamepadModel {
-    PS5,
-    PS4,
+pub enum SupportedInputGamepads {
+    Ps5DualSense,
+    PS4DualShock,
 }
 
 // TODO Use for first manual debugging / interpreting of new gamepads
@@ -44,7 +44,7 @@ fn _process_input_unknown(input: Vec<u8>) {
 /// - None of the connected devices are from a supported vendor
 /// - None of known vendor devices are supported products
 /// - Opening a device failed
-pub fn get_hid_gamepad(api: &HidApi) -> Result<(HidDevice, GamepadModel), HidApiGamepadError> {
+pub fn get_hid_gamepad(api: &HidApi) -> Result<(HidDevice, SupportedInputGamepads), HidApiGamepadError> {
     let bluetooth_devices: Vec<&DeviceInfo> = match _get_bluetooth_hid_devices(api) {
         Ok(vec) => vec,
         Err(_) => return Err(HidApiGamepadError::NoBTDevice),
@@ -61,7 +61,7 @@ pub fn get_hid_gamepad(api: &HidApi) -> Result<(HidDevice, GamepadModel), HidApi
             // PS5 Gamepad
             (0x054c, 0x0ce6) => {
                 match api.open(vid, pid) {
-                    Ok(hid_device) => return Ok((hid_device, GamepadModel::PS5)),
+                    Ok(hid_device) => return Ok((hid_device, SupportedInputGamepads::Ps5DualSense)),
                     Err(err) => {
                         println!("OpenFailed: vendor {:?}, product {:?}, Error {:?}", vid, pid, err);
                         return Err(HidApiGamepadError::OpenFailed);
@@ -139,6 +139,9 @@ pub fn read_bt_gamepad_input(device: HidDevice, input_gamepad: &Gamepad, sender:
         // setting -1 as timeout means waiting for the next input event, in this mode valid_bytes_count == HID_ARRAY_SIZE
         // setting 0ms as timeout, probably means sometimes the previous input event is taken, but the execution time of this whole block is 100x faster!
         // also: reading in blocking mode might be problematic if the gamepad is disconnected => infinite wait
+
+        // TODO create some form of benchmark to test the latency between timeout -1 and timeout 0 or timeout 6 (because the dualsense has 6ms with BT)
+        // maybe create timestamps at each read event and display the differences
         match device.read_timeout(&mut buf[..], -1) {
             Ok(value) => match value.cmp(&min_size) {
                 std::cmp::Ordering::Greater => {

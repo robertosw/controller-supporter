@@ -49,6 +49,17 @@ fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");
 
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        println!("One command line argument was expected to describe the desired output gamepad");
+        println!("If run with cargo, use: cargo run -- <argument>");
+        println!("");
+        println!("Supported output gamepads are:");
+        println!("")
+    }
+
+    exit(0);
+
     // ----- Enable Gadget
     // If this is done at a later point, the host might run into errors when trying to classify this device and turn it off
     // TODO output_gamepad should be expected from a command argument or set to a default if not given
@@ -76,8 +87,8 @@ fn main() {
 
     let (device, input_gamepad): (hidapi::HidDevice, &Gamepad) = match hidapi_fn::get_hid_gamepad(&api) {
         Ok((device, model)) => match model {
-            hidapi_fn::GamepadModel::PS5 => (device, &DUALSENSE),
-            hidapi_fn::GamepadModel::PS4 => (device, &DUALSHOCK),
+            hidapi_fn::SupportedInputGamepads::Ps5DualSense => (device, &DUALSENSE),
+            hidapi_fn::SupportedInputGamepads::PS4DualShock => (device, &DUALSHOCK),
         },
         Err(err) => print_error_and_exit!("Error accessing connected hid gamepad", err, 1),
     };
