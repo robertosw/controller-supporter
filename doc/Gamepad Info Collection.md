@@ -76,6 +76,17 @@ Wireless Controller:
 [ 6743.994024] playstation 0003:054C:0CE6.000A: Registered DualSense controller hw_version=0x00000514 fw_version=0x01040027
 ```
 
+### XBOX One Gamepad via USB
+```Shell
+[ 1776.599632] usb 1-2: new full-speed USB device number 5 using xhci_hcd
+[ 1776.753041] usb 1-2: New USB device found, idVendor=045e, idProduct=02ea, bcdDevice= 3.01
+[ 1776.753047] usb 1-2: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[ 1776.753048] usb 1-2: Product: Controller
+[ 1776.753049] usb 1-2: Manufacturer: Microsoft
+[ 1776.753050] usb 1-2: SerialNumber: 3033363030313539373534363437
+[ 1776.765253] input: Microsoft X-Box One S pad as /devices/pci0000:00/0000:00:08.1/0000:03:00.3/usb1/1-2/1-2:1.0/input/input19
+```
+
 <br>
 
 # Variant 3 - lsusb
@@ -476,6 +487,154 @@ Device Status:     0x0000
 ```
 
 <br>
+
+
+### XBOX One Gamepad
+```YAML
+Bus 001 Device 005: ID 045e:02ea Microsoft Corp. Xbox One Controller
+Device Descriptor:
+  bLength                18
+  bDescriptorType         1
+  bcdUSB               2.00
+  bDeviceClass          255 Vendor Specific Class
+  bDeviceSubClass        71 
+  bDeviceProtocol       208 
+  bMaxPacketSize0        64
+  idVendor           0x045e Microsoft Corp.
+  idProduct          0x02ea Xbox One Controller
+  bcdDevice            3.01
+  iManufacturer           1 Microsoft
+  iProduct                2 Controller
+  iSerial                 3 3033363030313539373534363437
+  bNumConfigurations      1
+  Configuration Descriptor:
+    bLength                 9
+    bDescriptorType         2
+    wTotalLength       0x0060
+    bNumInterfaces          3
+    bConfigurationValue     1
+    iConfiguration          0 
+    bmAttributes         0xa0
+      (Bus Powered)
+      Remote Wakeup
+    MaxPower              500mA
+    Interface Descriptor:
+      bLength                 9
+      bDescriptorType         4
+      bInterfaceNumber        0
+      bAlternateSetting       0
+      bNumEndpoints           2
+      bInterfaceClass       255 Vendor Specific Class
+      bInterfaceSubClass     71 
+      bInterfaceProtocol    208 
+      iInterface              0 
+      Endpoint Descriptor:
+        bLength                 7
+        bDescriptorType         5
+        bEndpointAddress     0x02  EP 2 OUT
+        bmAttributes            3
+          Transfer Type            Interrupt
+          Synch Type               None
+          Usage Type               Data
+        wMaxPacketSize     0x0040  1x 64 bytes
+        bInterval               4
+      Endpoint Descriptor:
+        bLength                 7
+        bDescriptorType         5
+        bEndpointAddress     0x82  EP 2 IN
+        bmAttributes            3
+          Transfer Type            Interrupt
+          Synch Type               None
+          Usage Type               Data
+        wMaxPacketSize     0x0040  1x 64 bytes
+        bInterval               4
+    Interface Descriptor:
+      bLength                 9
+      bDescriptorType         4
+      bInterfaceNumber        1
+      bAlternateSetting       0
+      bNumEndpoints           0
+      bInterfaceClass       255 Vendor Specific Class
+      bInterfaceSubClass     71 
+      bInterfaceProtocol    208 
+      iInterface              0 
+    Interface Descriptor:
+      bLength                 9
+      bDescriptorType         4
+      bInterfaceNumber        1
+      bAlternateSetting       1
+      bNumEndpoints           2
+      bInterfaceClass       255 Vendor Specific Class
+      bInterfaceSubClass     71 
+      bInterfaceProtocol    208 
+      iInterface              0 
+      Endpoint Descriptor:
+        bLength                 7
+        bDescriptorType         5
+        bEndpointAddress     0x03  EP 3 OUT
+        bmAttributes            1
+          Transfer Type            Isochronous
+          Synch Type               None
+          Usage Type               Data
+        wMaxPacketSize     0x00e4  1x 228 bytes
+        bInterval               1
+      Endpoint Descriptor:
+        bLength                 7
+        bDescriptorType         5
+        bEndpointAddress     0x83  EP 3 IN
+        bmAttributes            1
+          Transfer Type            Isochronous
+          Synch Type               None
+          Usage Type               Data
+        wMaxPacketSize     0x0040  1x 64 bytes
+        bInterval               1
+    Interface Descriptor:
+      bLength                 9
+      bDescriptorType         4
+      bInterfaceNumber        2
+      bAlternateSetting       0
+      bNumEndpoints           0
+      bInterfaceClass       255 Vendor Specific Class
+      bInterfaceSubClass     71 
+      bInterfaceProtocol    208 
+      iInterface              0 
+    Interface Descriptor:
+      bLength                 9
+      bDescriptorType         4
+      bInterfaceNumber        2
+      bAlternateSetting       1
+      bNumEndpoints           2
+      bInterfaceClass       255 Vendor Specific Class
+      bInterfaceSubClass     71 
+      bInterfaceProtocol    208 
+      iInterface              0 
+      Endpoint Descriptor:
+        bLength                 7
+        bDescriptorType         5
+        bEndpointAddress     0x04  EP 4 OUT
+        bmAttributes            2
+          Transfer Type            Bulk
+          Synch Type               None
+          Usage Type               Data
+        wMaxPacketSize     0x0040  1x 64 bytes
+        bInterval               0
+      Endpoint Descriptor:
+        bLength                 7
+        bDescriptorType         5
+        bEndpointAddress     0x84  EP 4 IN
+        bmAttributes            2
+          Transfer Type            Bulk
+          Synch Type               None
+          Usage Type               Data
+        wMaxPacketSize     0x0040  1x 64 bytes
+        bInterval               0
+Device Status:     0x0002
+  (Bus Powered)
+  Remote Wakeup Enabled
+
+```
+
+
 
 # Variant 4 - usbhid-dump
 [git repo](https://github.com/DIGImend/usbhid-dump)
