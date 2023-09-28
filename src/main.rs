@@ -181,8 +181,9 @@ mod tests {
     use flume::{unbounded, Sender};
     use std::time::Instant;
 
-    pub const RUNS: u32 = 100000;
+    pub const RUNS: u32 = 50000;
 
+    /// on my machine this takes 1.5µs
     #[test]
     fn bench1_all_gamepads_bt_input_to_gamepad() {
         println!("");
@@ -219,6 +220,7 @@ mod tests {
         }
     }
 
+    /// on my machine this takes ~1.5µs
     #[test]
     fn bench2_all_gamepads_gamepad_to_usb() {
         println!("");
@@ -255,6 +257,7 @@ mod tests {
         }
     }
 
+    /// on my machine this takes 10µs
     #[test]
     fn bench3_all_gamepads_with_channels() {
         println!("");
@@ -304,7 +307,7 @@ mod tests {
             };
 
             counter += 1;
-            thread::sleep(Duration::from_nanos(100));
+            thread::sleep(Duration::from_micros(10));
         }
     }
 
