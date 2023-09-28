@@ -1,6 +1,6 @@
-use crate::{universal_gamepad::UniversalGamepad, usb_gadget::*, usb_gamepad::OutputGamepad};
+use crate::{universal_gamepad::UniversalGamepad, usb_gadget::*, usb_gamepad::Gamepad};
 
-pub const DUALSHOCK: OutputGamepad = OutputGamepad {
+pub const DUALSHOCK: Gamepad = Gamepad {
     min_bt_report_size: 20,
     is_supported: false,
     associated_args: ["ps4", "dualshock"],
