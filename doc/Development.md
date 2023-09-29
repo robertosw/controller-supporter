@@ -32,3 +32,11 @@ playstation: probe of 0003:054C:0CE6.0013 failed with error -22
 
 ### Possiblity for multiple HID devices with one connection:
 https://electronics.stackexchange.com/a/400268
+
+### XBOX
+[XBOX Dev Wiki](https://xboxdevwiki.net/Xbox_Input_Devices#Standard_Gamepads)
+
+### PS
+[PS Dev Wiki](https://www.psdevwiki.com/)
+[DualShock Dev Wiki](https://www.psdevwiki.com/ps4/DualShock_4)
+[PS4 HID Output Report BT](https://www.psdevwiki.com/ps4/DS4-BT#HID_OUTPUT_reports)
