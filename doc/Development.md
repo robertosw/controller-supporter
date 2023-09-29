@@ -29,3 +29,6 @@ playstation 0003:054C:0CE6.0013: Failed to get MAC address from DualSense
 playstation 0003:054C:0CE6.0013: Failed to create dualsense.
 playstation: probe of 0003:054C:0CE6.0013 failed with error -22
 ```
+
+### Possiblity for multiple HID devices with one connection:
+https://electronics.stackexchange.com/a/400268

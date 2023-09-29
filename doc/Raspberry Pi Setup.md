@@ -56,3 +56,8 @@ Tell linux to use the hardware capabilities of the raspi:
   - `sudo chmod +s ./gamgepad_bridge`
 - This does include some security risk. If some part of this program can be exploited, an attacker can run other code as the root user and effectively do anything with your Raspberry Pi. Since this requires someone to already have physical access or some way of login to your Raspberry Pi this risk is accepted.
   - If you know a better way to allow the modification of these files while still being able to run this program from autostart without any manual action, please let me know.
+
+<br>
+
+# 3. For use of XBOX Gamepads:
+Install `xboxdrv`
