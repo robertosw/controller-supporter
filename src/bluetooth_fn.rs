@@ -1,10 +1,14 @@
-use std::io::{BufRead, BufReader};
-use std::process::{exit, Command, Stdio};
+use std::io::BufRead;
+use std::io::BufReader;
+use std::process::exit;
+use std::process::Command;
+use std::process::Stdio;
 
 use crate::helper_fn::run_cmd;
 use crate::print_and_exit;
 
-// this is a bit unconventional but easier to implement, the alternative would be to talk to linux' bluez directly on dbus
+// this is a bit unconventional but easier to implement.
+// the alternative would be to talk to linux' bluez directly on dbus
 
 /// Steps:
 /// - Power on
@@ -51,32 +55,40 @@ pub fn wait_for_bt_device() {
         Ok(_) => {}
         Err(_) => print_and_exit!("bluetoothctl power on failed", 1),
     }
+    match run_cmd("/", "bluetoothctl discoverable on") {
+        Ok(_) => {}
+        Err(_) => print_and_exit!("bluetoothctl discoverable on failed", 1),
+    }
+    match run_cmd("/", "bluetoothctl pairable on") {
+        Ok(_) => {}
+        Err(_) => print_and_exit!("bluetoothctl pairable on failed", 1),
+    }
+
     _bt_scan_on();
     return;
 }
 
-/// turns bluetooth on
-fn _bt_power_on() {
-    let output_power_on = match Command::new("bluetoothctl").args(["power", "on"]).output() {
-        Ok(out) => out,
-        Err(err) => {
-            println!("unwrapping the output failed: {:?}", err);
-            exit(1);
-        }
-    };
-
-    let stdout = String::from_utf8(output_power_on.stdout).ok();
-    let stderr = String::from_utf8(output_power_on.stderr).ok();
-
-    if !output_power_on.status.success() {
-        println!("bluetoothctl power on failed:");
-        println!("{:?}", stderr);
-        exit(1);
-    }
-
-    println!("Stdout: {:?}", stdout);
-    println!("Stderr: {:?}", stderr);
-}
+// fn power_on() {
+//     let output_power_on = match Command::new("bluetoothctl").args(["power", "on"]).output() {
+//         Ok(out) => out,
+//         Err(err) => {
+//             println!("unwrapping the output failed: {:?}", err);
+//             exit(1);
+//         }
+//     };
+//
+//     let stdout = String::from_utf8(output_power_on.stdout).ok();
+//     let stderr = String::from_utf8(output_power_on.stderr).ok();
+//
+//     if !output_power_on.status.success() {
+//         println!("bluetoothctl power on failed:");
+//         println!("{:?}", stderr);
+//         exit(1);
+//     }
+//
+//     println!("Stdout: {:?}", stdout);
+//     println!("Stderr: {:?}", stderr);
+// }
 
 fn _bt_scan_on() {
     // start scanning for devices

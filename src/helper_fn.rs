@@ -1,5 +1,6 @@
 use std::process::Command;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use std::time::Instant;
 
 // use rand::Rng;
 
