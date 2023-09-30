@@ -1,7 +1,5 @@
-use std::{
-    process::Command,
-    time::{Duration, Instant},
-};
+use std::process::Command;
+use std::time::{Duration, Instant};
 
 // use rand::Rng;
 
@@ -64,7 +62,7 @@ pub fn run_cmd(current_dir: &str, cmd: &str) -> Result<(), ()> {
             return Err(());
         }
     };
-    
+
     if !_stdout.is_empty() {
         println!("> {:?}", _stdout);
     }

@@ -2,11 +2,13 @@ use flume::Receiver;
 use flume::TryRecvError;
 use std::env;
 use std::fs::File;
-use std::{io::Write, process::exit, thread, time::Instant};
-use std::{
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use std::io::Write;
+use std::process::exit;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::thread;
+use std::time::Duration;
+use std::time::Instant;
 
 use crate::usb_gamepad_ps4::DUALSHOCK;
 use crate::usb_gamepad_ps5::DUALSENSE;

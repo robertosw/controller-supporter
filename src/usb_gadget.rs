@@ -10,11 +10,10 @@
  *  - Subclass field is used to identify Boot Devices.
 */
 
-use std::{
-    fs::{self, File},
-    io::Write,
-    process::exit,
-};
+use std::fs;
+use std::fs::File;
+use std::io::Write;
+use std::process::exit;
 
 use crate::helper_fn::run_cmd;
 use crate::print_and_exit;

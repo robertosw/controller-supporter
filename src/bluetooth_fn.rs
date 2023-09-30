@@ -1,9 +1,8 @@
-use std::{
-    io::{BufRead, BufReader},
-    process::{exit, Command, Stdio},
-};
+use std::io::{BufRead, BufReader};
+use std::process::{exit, Command, Stdio};
 
-use crate::{helper_fn::run_cmd, print_and_exit};
+use crate::helper_fn::run_cmd;
+use crate::print_and_exit;
 
 // this is a bit unconventional but easier to implement, the alternative would be to talk to linux' bluez directly on dbus
 
