@@ -84,11 +84,11 @@ impl UsbGadgetDescriptor {
     }
 
     // fn init_kernel_modules(&self) {
-    //     match run_cmd("/", "modprobe dwc2") {
+    //     match run_cmd(Some("/", "modprobe dwc2") {
     //         Ok(_) => (),
     //         Err(_) => print_and_exit!("Could load kernel module 'dwc2'", 20),
     //     };
-    //     match run_cmd("/", "modprobe libcomposite") {
+    //     match run_cmd(Some("/", "modprobe libcomposite") {
     //         Ok(_) => (),
     //         Err(_) => print_and_exit!("Could load kernel module 'libcomposite'", 20),
     //     };
@@ -96,33 +96,33 @@ impl UsbGadgetDescriptor {
 
     /// will exit if any operation is not successful
     fn _create_directories(&self) {
-        match run_cmd("/sys/kernel/config/usb_gadget", "mkdir raspi") {
+        match run_cmd(Some("/sys/kernel/config/usb_gadget"), "mkdir raspi") {
             Ok(_) => (),
             Err(_) => print_and_exit!("Could not create directory /sys/kernel/config/usb_gadget/raspi", 9),
         };
 
         // Strings
         // The system already creates the directory "strings"
-        match run_cmd("/sys/kernel/config/usb_gadget/raspi/strings", "mkdir 0x409") {
+        match run_cmd(Some("/sys/kernel/config/usb_gadget/raspi/strings"), "mkdir 0x409") {
             Ok(_) => (),
             Err(_) => print_and_exit!("Could not create directory /sys/kernel/config/usb_gadget/raspi/strings/0x409", 9),
         };
 
         // Configuration
         // The system already creates the directory "configs"
-        match run_cmd("/sys/kernel/config/usb_gadget/raspi/configs", "mkdir c.1") {
+        match run_cmd(Some("/sys/kernel/config/usb_gadget/raspi/configs"), "mkdir c.1") {
             Ok(_) => (),
             Err(_) => print_and_exit!("Could not create directory /sys/kernel/config/usb_gadget/raspi/configs/c.1", 9),
         };
 
-        match run_cmd("/sys/kernel/config/usb_gadget/raspi/configs/c.1", "mkdir -p strings/0x409") {
+        match run_cmd(Some("/sys/kernel/config/usb_gadget/raspi/configs/c.1"), "mkdir -p strings/0x409") {
             Ok(_) => (),
             Err(_) => print_and_exit!("Could not create directory /sys/kernel/config/usb_gadget/raspi/configs/c.1/strings/0x409", 14),
         };
 
         // Functions
         // The system already creates the directory "functions"
-        match run_cmd("/sys/kernel/config/usb_gadget/raspi/functions", "mkdir hid.usb0") {
+        match run_cmd(Some("/sys/kernel/config/usb_gadget/raspi/functions"), "mkdir hid.usb0") {
             Ok(_) => (),
             Err(_) => print_and_exit!("Could not create directory /sys/kernel/config/usb_gadget/raspi/functions/hid.usb0", 9),
         };
@@ -209,7 +209,7 @@ impl UsbGadgetDescriptor {
     }
 
     fn _assign_fn_to_config(&self) {
-        match run_cmd(DEVICE_DIR, "ln -s functions/hid.usb0/ configs/c.1/") {
+        match run_cmd(Some(DEVICE_DIR), "ln -s functions/hid.usb0/ configs/c.1/") {
             Ok(_) => (),
             Err(_) => print_and_exit!("Could not link functions (functions/hid.usb0/) to configs (configs/c.1/)", 14),
         }

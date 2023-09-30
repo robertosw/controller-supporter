@@ -1,4 +1,4 @@
-// #![allow(dead_code)]
+#![allow(dead_code)]
 
 #[macro_use]
 extern crate version;
@@ -45,6 +45,9 @@ use crate::usb_gamepad_ps5::DUALSENSE;
 fn main() {
     println!("\nGamepad-Bridge started: v{:}", version!());
     println!("This program needs to be run as root user. Please set uuid accordingly.\n");
+
+    wait_for_bt_device();
+    exit(0);
 
     // ----- Enable Gadget
     // If this is done at a later point, the host might run into errors when trying to classify this device and turn it off

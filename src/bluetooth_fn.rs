@@ -3,6 +3,8 @@ use std::io::BufReader;
 use std::process::exit;
 use std::process::Command;
 use std::process::Stdio;
+use std::thread;
+use std::time::Duration;
 
 use crate::helper_fn::run_cmd;
 use crate::print_and_exit;
@@ -10,62 +12,132 @@ use crate::print_and_exit;
 // this is a bit unconventional but easier to implement.
 // the alternative would be to talk to linux' bluez directly on dbus
 
+#[derive(Clone)]
+struct BtDevice {
+    mac: &'static str,
+    name: &'static str,
+    is_online: bool,
+    is_gamepad: Option<bool>,
+}
+
+struct MacAddressList {
+    trusted: Vec<BtDevice>,
+    untrusted: Vec<BtDevice>,
+}
+impl MacAddressList {
+    pub const fn init() -> Self {
+        let list = MacAddressList {
+            trusted: Vec::new(),
+            untrusted: Vec::new(),
+        };
+
+        // TODO Read file content into Self
+
+        return list;
+    }
+
+    pub fn set_trusted(&mut self, trusted: Vec<BtDevice>) {
+        // TODO test if this is called if something is pushed to Vec
+        self._write_to_file();
+        self.trusted = trusted;
+    }
+
+    /// TODO
+    fn _read_from_file(&self) -> Vec<BtDevice> {
+        return vec![BtDevice {
+            mac: "AA:AA:AA:AA:AA",
+            name: "name",
+            is_online: false,
+            is_gamepad: None,
+        }];
+    }
+
+    /// TODO
+    fn _write_to_file(&self) {}
+}
+
+// Steps:
+// - Power on
+// - Discoverable on
+// - Pairable on
+// - Wait 1 second to give any known devices a chance to connect
+//
+// 1. check with `devices Connected` if any devices are already connected to the RPi
+//     1. If list is empty, continue
+//     2. If the list is not empty:
+//         - Check if any of the mac addresses are known to be supported gamepads (mac addresses from a file)
+//         - If so, check with get_hid_gamepad() if any of the devices are usable as gamepads
+//           Stop if at first supported gamepad
+//
+// 2. check with `devices Paired` if the RPi was already connected to any devices
+//     1. If list is empty, continue
+//     2. If the list is not empty:
+//         1. Check if list contains any known mac addresses, for each known:
+//             - Connect (and trust)
+//             - see if get_hid_gamepad() finds any supported gamepads
+//             - If not, disconnect and remove mac address from list
+//         2. If any devices are left, find all which could be gamepads using _is_device_controller()
+//             - Connect (and trust)
+//             - see if get_hid_gamepad() finds any supported gamepads
+//                 - If not, disconnect
+//                 - If so, add to mac address list
+//
+// 3. scan on
+//     - track all devices like this: (mac address, name, is online? [bool], is gamepad [unknown, no, yes] )
+//       and update that list with every event
+//     - For each device in that list, that has `is gamepad: unknown`:
+//         - if it has no name: ignore
+//         - if it has a name: check if name is known as a gamepad
+//             - if so, connect and trust
+//             - check with get_hid_gamepad() if gamepad is supported
+//             - if so, add to mac address list
+//             - stop scan and return
+//
+// - discoverable off
+// - pairable offBtGamepad
+
 /// Steps:
 /// - Power on
 /// - Discoverable on
 /// - Pairable on
 /// - Wait 1 second to give any known devices a chance to connect
 ///
-/// 1. check with `devices Connected` if any devices are already connected to the RPi
-///     1. If list is empty, continue
-///     2. If the list is not empty:
-///         - Check if any of the mac addresses are known to be supported gamepads (mac addresses from a file)
-///         - If so, check with get_hid_gamepad() if any of the devices are usable as gamepads
-///           Stop if at first supported gamepad
-///
-/// 2. check with `devices Paired` if the RPi was already connected to any devices
-///     1. If list is empty, continue
-///     2. If the list is not empty:
-///         1. Check if list contains any known mac addresses, for each known:
-///             - Connect (and trust)
-///             - see if get_hid_gamepad() finds any supported gamepads
-///             - If not, disconnect and remove mac address from list
-///         2. If any devices are left, find all which could be gamepads using _is_device_controller()
-///             - Connect (and trust)
-///             - see if get_hid_gamepad() finds any supported gamepads
-///                 - If not, disconnect
-///                 - If so, add to mac address list
-///
-/// 3. scan on
-///     - track all devices like this: (mac address, name, still online? [bool], is gamepad [unknown, no, yes] )
-///       and update that list with every event
-///     - For each device in that list, that has `is gamepad: unknown`:
-///         - if it has no name: ignore
-///         - if it has a name: check if name is known as a gamepad
-///             - if so, connect and trust
-///             - check with get_hid_gamepad() if gamepad is supported
-///             - if so, add to mac address list
-///             - stop scan and return
+/// 1. try using any connected devices as gamepads
+/// 2. try connecting to any already known device
+/// 3. scan until gamepad is found
 ///
 /// - discoverable off
 /// - pairable off
-
 pub fn wait_for_bt_device() {
-    match run_cmd("/", "bluetoothctl power on") {
+    match run_cmd(None, "bluetoothctl power on") {
         Ok(_) => {}
         Err(_) => print_and_exit!("bluetoothctl power on failed", 1),
     }
-    match run_cmd("/", "bluetoothctl discoverable on") {
+    match run_cmd(None, "bluetoothctl discoverable on") {
         Ok(_) => {}
         Err(_) => print_and_exit!("bluetoothctl discoverable on failed", 1),
     }
-    match run_cmd("/", "bluetoothctl pairable on") {
+    match run_cmd(None, "bluetoothctl pairable on") {
         Ok(_) => {}
         Err(_) => print_and_exit!("bluetoothctl pairable on failed", 1),
     }
 
-    _bt_scan_on();
+    let known_devices: MacAddressList = MacAddressList::init();
+
+    thread::sleep(Duration::from_secs(1));
+
+    check_connected_devices(&known_devices);
+    check_paired_devices(&known_devices);
+
+    bt_scan_on();
     return;
+}
+
+fn check_connected_devices(known_devices: &MacAddressList) -> Result<BtDevice, ()> {
+    return Err(());
+}
+fn check_paired_devices(known_devices: &MacAddressList) -> Result<BtDevice, ()> {
+    return Err(());
 }
 
 // fn power_on() {
@@ -90,7 +162,7 @@ pub fn wait_for_bt_device() {
 //     println!("Stderr: {:?}", stderr);
 // }
 
-fn _bt_scan_on() {
+fn bt_scan_on() {
     // start scanning for devices
     let child_cmd = match Command::new("stdbuf")
         .args(["-o0", "bluetoothctl", "scan", "on"])
@@ -114,7 +186,7 @@ fn _bt_scan_on() {
     for line in stdout.lines() {
         match line {
             Ok(line) => {
-                _handle_bt_scan_output(&line);
+                handle_bt_scan_output(&line);
             }
             Err(err) => println!("Error out: {}", err),
         }
@@ -133,7 +205,7 @@ fn _bt_scan_on() {
 }
 
 /// Returns `false` if the output line does not suggest that a gamepad has been found
-pub fn _handle_bt_scan_output(bt_scan_output_line: &String) -> bool {
+fn handle_bt_scan_output(bt_scan_output_line: &String) -> bool {
     if bt_scan_output_line.contains("Discovery started") {
         // First line of this command can be ignored
         return false;
@@ -151,7 +223,7 @@ pub fn _handle_bt_scan_output(bt_scan_output_line: &String) -> bool {
 
     match log_type {
         "NEW" => {
-            _is_device_controller(&bt_scan_output_line);
+            is_device_controller(&bt_scan_output_line);
             return false; // TODO
         }
         "CHG" => false,
@@ -164,7 +236,10 @@ pub fn _handle_bt_scan_output(bt_scan_output_line: &String) -> bool {
 ///
 /// Arguments:
 /// - `output_line: &str` = One output line of the command `bluetoothctl scan on`
-fn _is_device_controller(output_line: &str) -> bool {
+fn is_device_controller(output_line: &str) -> bool {
+    // TODO rewrite to not assume anything about the string its given,
+    // so that this function can be used on any bt device name and not just `scan on` outputs
+
     // Possible outputs
     // [NEW] Device 54:C2:8B:53:A4:3C 54-C2-8B-53-A4-3C         --> irrelevant
     // [NEW] Device 54:C2:8B:53:A4:3C Name of Device            --> THIS is interesting

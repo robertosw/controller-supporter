@@ -38,17 +38,31 @@ macro_rules! print_error_and_exit {
 }
 
 /// always runs command as sudo
-pub fn run_cmd(current_dir: &str, cmd: &str) -> Result<(), ()> {
+pub fn run_cmd(current_dir: Option<&str>, cmd: &str) -> Result<(), ()> {
     // println!("\n$ sudo {cmd}");
-    let args: Vec<&str> = cmd.split_whitespace().collect();
 
-    let output = match Command::new("sudo").args(args).current_dir(current_dir).output() {
-        Ok(output) => output,
-        Err(error) => {
-            println!("Error: {:?}", error);
-            return Err(());
-        }
-    };
+    let args: Vec<&str> = cmd.split_whitespace().collect();
+    let output: std::process::Output;
+
+    if current_dir == None {
+        output = match Command::new("sudo").args(args).output() {
+            Ok(output) => output,
+            Err(error) => {
+                println!("Error: {:?}", error);
+                return Err(());
+            }
+        };
+    } else {
+        let dir = current_dir.expect("run_cmd: `current_dir` could not be unwrapped, but was not None ");
+        output = match Command::new("sudo").args(args).current_dir(dir).output() {
+            Ok(output) => output,
+            Err(error) => {
+                println!("Error: {:?}", error);
+                return Err(());
+            }
+        };
+    }
+
     let _stdout = match String::from_utf8(output.stdout) {
         Ok(string) => string,
         Err(error) => {
