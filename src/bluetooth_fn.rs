@@ -126,8 +126,8 @@ pub fn wait_for_bt_device() {
 
     thread::sleep(Duration::from_secs(1));
 
-    check_connected_devices(&known_devices);
-    check_paired_devices(&known_devices);
+    let _ = check_connected_devices(&known_devices);
+    let _ = check_paired_devices(&known_devices);
 
     bt_scan_on();
     return;

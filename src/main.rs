@@ -35,6 +35,7 @@ use crate::usb_gamepad_ps4::DUALSHOCK;
 use crate::usb_gamepad_ps5::DUALSENSE;
 
 //  if working inside a docker container: (started with the docker-compose from project root)
+//  BLUETOOTH DOES NOT WORK INSIDE A DOCKER CONTAINER
 //  - build and run (inside container)  `cargo run`
 //
 //  if working on native os as non root: (from /gamepad-bridge)

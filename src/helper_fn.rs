@@ -1,3 +1,4 @@
+use std::process::exit;
 use std::process::Command;
 use std::time::Duration;
 use std::time::Instant;
@@ -39,7 +40,7 @@ macro_rules! print_error_and_exit {
 
 /// always runs command as sudo
 pub fn run_cmd(current_dir: Option<&str>, cmd: &str) -> Result<(), ()> {
-    // println!("\n$ sudo {cmd}");
+    println!("\n$ sudo {cmd}");
 
     let args: Vec<&str> = cmd.split_whitespace().collect();
     let output: std::process::Output;
@@ -53,7 +54,10 @@ pub fn run_cmd(current_dir: Option<&str>, cmd: &str) -> Result<(), ()> {
             }
         };
     } else {
-        let dir = current_dir.expect("run_cmd: `current_dir` could not be unwrapped, but was not None ");
+        let dir = match current_dir {
+            Some(val) => val,
+            None => print_and_exit!("run_cmd: `current_dir` could not be unwrapped, but was not None", 1),
+        };
         output = match Command::new("sudo").args(args).current_dir(dir).output() {
             Ok(output) => output,
             Err(error) => {
