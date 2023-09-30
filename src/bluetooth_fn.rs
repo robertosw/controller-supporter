@@ -1,38 +1,63 @@
 use std::{
     io::{BufRead, BufReader},
     process::{exit, Command, Stdio},
-    sync::{Arc, Mutex},
-    thread,
 };
 
-// --------- bluetooth handling ---------
-
-// basic procedure:
-//     1. turn on bluetooth
-//     2. turn on scanning and read until e.g. "gamepad" is in name
-//     3. stop scanning and connect via mac address
+use crate::{helper_fn::run_cmd, print_and_exit};
 
 // this is a bit unconventional but easier to implement, the alternative would be to talk to linux' bluez directly on dbus
 
-// bluetoothctl steps (commands)
-//     power on
-//     scan on
-//     (connecting to already known devices is done automatically by bluez)
-//
-// Check if gamepads are already known and connected
-// this has to be done each second, because gamepad might get connected after the programm starts
-//     devices
-//     paired-devices (run only if devices list is empty or no gamepads)
-//     >>> if list has 1+ gamepads -> create thread for each to use its input
-//
-// At the same time read output of "scan on", if gamepad was found:
-//     pairable on
-//     connect <mac>   after finding a gamepad with "scan on" connect to it
-//     trust <mac>     trust this gamepad, so that it will be connected automatically in the future
-//     pairable off
+/// Steps:
+/// - Power on
+/// - Discoverable on
+/// - Pairable on
+/// - Wait 1 second to give any known devices a chance to connect
+///
+/// 1. check with `devices Connected` if any devices are already connected to the RPi
+///     1. If list is empty, continue
+///     2. If the list is not empty:
+///         - Check if any of the mac addresses are known to be supported gamepads (mac addresses from a file)
+///         - If so, check with get_hid_gamepad() if any of the devices are usable as gamepads
+///           Stop if at first supported gamepad
+///
+/// 2. check with `devices Paired` if the RPi was already connected to any devices
+///     1. If list is empty, continue
+///     2. If the list is not empty:
+///         1. Check if list contains any known mac addresses, for each known:
+///             - Connect (and trust)
+///             - see if get_hid_gamepad() finds any supported gamepads
+///             - If not, disconnect and remove mac address from list
+///         2. If any devices are left, find all which could be gamepads using _is_device_controller()
+///             - Connect (and trust)
+///             - see if get_hid_gamepad() finds any supported gamepads
+///                 - If not, disconnect
+///                 - If so, add to mac address list
+///
+/// 3. scan on
+///     - track all devices like this: (mac address, name, still online? [bool], is gamepad [unknown, no, yes] )
+///       and update that list with every event
+///     - For each device in that list, that has `is gamepad: unknown`:
+///         - if it has no name: ignore
+///         - if it has a name: check if name is known as a gamepad
+///             - if so, connect and trust
+///             - check with get_hid_gamepad() if gamepad is supported
+///             - if so, add to mac address list
+///             - stop scan and return
+///
+/// - discoverable off
+/// - pairable off
+
+pub fn wait_for_bt_device() {
+    match run_cmd("/", "bluetoothctl power on") {
+        Ok(_) => {}
+        Err(_) => print_and_exit!("bluetoothctl power on failed", 1),
+    }
+    _bt_scan_on();
+    return;
+}
 
 /// turns bluetooth on
-pub fn bt_power_on() {
+fn _bt_power_on() {
     let output_power_on = match Command::new("bluetoothctl").args(["power", "on"]).output() {
         Ok(out) => out,
         Err(err) => {
@@ -54,55 +79,73 @@ pub fn bt_power_on() {
     println!("Stderr: {:?}", stderr);
 }
 
-/// Spawn a new thread to scan for bluetooth devices using the terminal command `bluetoothctl scan on` <br>
-/// Calling `thread_handle.join()` on this thread terminates the `bluetoothctl scan on` command before ending this thread
-///
-/// 1. Return Value: As soon as `bluetoothctl scan on` outputs a new line, it will be written into the `Arc<Mutex<Vec<String>>>`
-/// 2. Return Value: `thread::JoinHandle<()>` The thread handle
-pub fn bt_scan_on_threaded() -> (Arc<Mutex<Vec<String>>>, thread::JoinHandle<()>) {
-    let scan_output: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+fn _bt_scan_on() {
+    // start scanning for devices
+    let child_cmd = match Command::new("stdbuf")
+        .args(["-o0", "bluetoothctl", "scan", "on"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .stdin(Stdio::piped())
+        .spawn()
+    {
+        Ok(child) => child,
+        Err(err) => {
+            println!("creating terminal command went wrong. Exiting.\nError: {err}");
+            exit(1);
+        }
+    };
 
-    // spawn new thread
-    let scan_clone = scan_output.clone();
-    let handle = thread::spawn(move || _bt_scan_on_thread(scan_clone));
+    let stdout = BufReader::new(child_cmd.stdout.expect("Failed to capture stdout"));
+    let stderr = BufReader::new(child_cmd.stderr.expect("Failed to capture stderr"));
 
-    return (scan_output, handle);
+    // UNLESS bluetoothctl fails at some point in time, this for loop is never left,
+    // because bluetoothctl scan on never ends sucessfully on its own
+    for line in stdout.lines() {
+        match line {
+            Ok(line) => {
+                _handle_bt_scan_output(&line);
+            }
+            Err(err) => println!("Error out: {}", err),
+        }
+    }
+
+    // so this loop is only entered if the command ends
+    for line in stderr.lines() {
+        match line {
+            Ok(line) => println!("Output err: {}", line),
+            Err(err) => println!("Error err: {}", err),
+        }
+    }
+
+    // Its apparently unneccecary to call "bluetoothctl scan off",
+    // this seems to be done correctly if the scan on command gets terminated
 }
 
-/// Search the given output of `bluetoothctl scan on` for yet unknown gamepads. <br>
-/// Clears the output before returning.
-///
-/// 1. Argument: `shared_mem_scan_output` = the output of the bluetooth scan, produced by `bt_scan_on_threaded()`
-pub fn handle_bt_scan_output(shared_mem_scan_output: &Arc<Mutex<Vec<String>>>) {
-    let output_copy: Vec<String> = _move_from_shared_mem(shared_mem_scan_output);
+/// Returns `false` if the output line does not suggest that a gamepad has been found
+pub fn _handle_bt_scan_output(bt_scan_output_line: &String) -> bool {
+    if bt_scan_output_line.contains("Discovery started") {
+        // First line of this command can be ignored
+        return false;
+    }
 
-    // check if anything new was added and do something with it
-    for line in output_copy {
-        let line_str: &str = line.as_str();
+    // Find out which Event type this line is
+    // Possible options are below in match
+    let first_asci_upper: usize = match bt_scan_output_line.find(|c: char| c.is_ascii_uppercase()) {
+        None => return false,
+        Some(usize) => usize,
+    };
+    let line_str = bt_scan_output_line.as_str();
+    let log_type = &line_str[first_asci_upper..first_asci_upper + 3];
+    println!("Type: {:?}", log_type);
 
-        if line.contains("Discovery started") {
-            // First line of this command can be ignored
-            continue;
+    match log_type {
+        "NEW" => {
+            _is_device_controller(&bt_scan_output_line);
+            return false; // TODO
         }
-
-        let first_asci_upper: usize = match line.find(|c: char| c.is_ascii_uppercase()) {
-            None => continue,
-            Some(usize) => usize,
-        };
-        let log_type = &line_str[first_asci_upper..first_asci_upper + 3];
-        println!("Type: {:?}", log_type);
-
-        match log_type {
-            "NEW" => {
-                if _is_device_controller(line_str) == true {
-                    // TODO Connect to controller
-                    return;
-                }
-            }
-            "CHG" => (),
-            "DEL" => (),
-            _ => (),
-        }
+        "CHG" => false,
+        "DEL" => false,
+        _ => false,
     }
 }
 
@@ -155,73 +198,4 @@ fn _is_device_controller(output_line: &str) -> bool {
     }
 
     return false;
-}
-
-/// turn bluetoothctl scanning on and write output without buffering into file with param `output_file_name` <br>
-/// If no error is occured, function never ends. Should be run in seperate thread
-fn _bt_scan_on_thread(scan_output: Arc<Mutex<Vec<String>>>) {
-    // start scanning for devices
-    let child_cmd = match Command::new("stdbuf")
-        .args(["-o0", "bluetoothctl", "scan", "on"])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .stdin(Stdio::piped())
-        .spawn()
-    {
-        Ok(child) => child,
-        Err(err) => {
-            println!("creating terminal command went wrong. Exiting.\nError: {err}");
-            exit(1);
-        }
-    };
-
-    let stdout = BufReader::new(child_cmd.stdout.expect("Failed to capture stdout"));
-    let stderr = BufReader::new(child_cmd.stderr.expect("Failed to capture stderr"));
-
-    // UNLESS bluetoothctl fails at some point in time, this for loop is never left,
-    // because bluetoothctl scan on never ends sucessfully on its own
-    for line in stdout.lines() {
-        match line {
-            Ok(line) => {
-                println!("Output out: {}", line);
-                {
-                    let mut scan_output_locked = scan_output.lock().expect("Locking Arc<Mutex<Vec<String>>> failed!");
-                    scan_output_locked.push(line);
-                    // locks are released after a block goes out of sope
-                }
-            }
-            Err(err) => println!("Error out: {}", err),
-        }
-    }
-
-    // so this loop is only entered if the command ends
-    for line in stderr.lines() {
-        match line {
-            Ok(line) => println!("Output err: {}", line),
-            Err(err) => println!("Error err: {}", err),
-        }
-    }
-
-    // This part is always reached as long as this thread is terminated by .join()
-
-    // This always returns an error, so its currently useless
-    // let scan_off = match Command::new("bluetoothctl").args(["scan", "off"]).output() {
-    //     Ok(output) => output,
-    //     Err(_) => return,
-    // };
-    // println!("{:?}", scan_off);
-}
-
-/// returns the current contents of the shared memory, clears shared memory in the process
-fn _move_from_shared_mem(shared_memory: &Arc<Mutex<Vec<String>>>) -> Vec<String> {
-    // always unwrap after calling lock.
-    // If lock fails, this thread should panic because the other thread is in a deadlock
-    // If the Mutex is locked by other thread, this one waits here until free
-    let mut scan_output_locked = shared_memory.lock().unwrap();
-    let copy: Vec<String> = scan_output_locked.clone();
-    scan_output_locked.clear();
-
-    return copy;
-
-    // locks are released after a block goes out of sope
 }

@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+// #![allow(dead_code)]
 
 #[macro_use]
 extern crate version;
@@ -6,7 +6,6 @@ extern crate version;
 
 extern crate termion;
 
-use ctrlc::set_handler;
 use flume::bounded;
 use flume::unbounded;
 use flume::Receiver;
@@ -14,11 +13,7 @@ use flume::Sender;
 use hidapi::HidApi;
 use std::env;
 use std::process::exit;
-use std::process::Command;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::sync::mpsc;
-use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use usb_gadget::UsbGadgetDescriptor;
@@ -67,7 +62,7 @@ fn main() {
     ctrlc::set_handler(move || sender_ctrlc.send(()).expect("Could not send signal on channel.")).expect("Error setting Ctrl-C handler");
 
     // ----- BT connection here
-    // TODO
+    wait_for_bt_device();
 
     // ----- What gamepad is connected?
     let api = match HidApi::new() {
@@ -122,54 +117,6 @@ fn main() {
     output_gamepad.gadget.clean_up_device();
 
     println!("Everything is cleaned up :)");
-}
-
-fn _bt_program_flow() {
-    // Create a shared boolean flag to indicate if Ctrl+C was pressed
-    let ctrlc = Arc::new(AtomicBool::new(true));
-    let ctrlc_clone = ctrlc.clone();
-
-    // Set the flag to false when Ctrl+C is pressed
-    match set_handler(move || ctrlc_clone.store(false, Ordering::SeqCst)) {
-        Ok(_) => (),
-        Err(err) => {
-            println!("Error setting Ctrl-C handler {:?}", err);
-            exit(1);
-        }
-    };
-
-    {
-        let output_power_on = match Command::new("bluetoothctl").args(["power", "on"]).output() {
-            Ok(out) => out,
-            Err(err) => {
-                println!("unwrapping the output failed: {:?}", err);
-                exit(1);
-            }
-        };
-
-        let stdout = String::from_utf8(output_power_on.stdout).ok();
-        let stderr = String::from_utf8(output_power_on.stderr).ok();
-
-        if !output_power_on.status.success() {
-            println!("bluetoothctl power on failed:");
-            println!("{:?}", stderr);
-            exit(1);
-        }
-
-        println!("Stdout: {:?}", stdout);
-        println!("Stderr: {:?}", stderr);
-    };
-    let (shared_mem_scan_output, thread_handle) = bt_scan_on_threaded();
-
-    // find new controllers
-    // loop while ctrlc has not been pressed (.load == true)
-    while ctrlc.load(Ordering::SeqCst) {
-        handle_bt_scan_output(&shared_mem_scan_output);
-
-        thread::sleep(Duration::from_millis(500));
-    }
-
-    thread_handle.join().unwrap();
 }
 
 // for benchmarking in tests use: cargo test -- --show-output

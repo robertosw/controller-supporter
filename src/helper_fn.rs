@@ -64,8 +64,14 @@ pub fn run_cmd(current_dir: &str, cmd: &str) -> Result<(), ()> {
             return Err(());
         }
     };
-    // println!("> {:?}", stdout);
-    // println!("! {:?}", stderr);
+    
+    if !_stdout.is_empty() {
+        println!("> {:?}", _stdout);
+    }
+
+    if !_stderr.is_empty() {
+        println!("! {:?}", _stderr);
+    }
 
     return Ok(());
 }
