@@ -2,7 +2,7 @@ If you have any ideas or know of anything I should avoid or be careful with, don
 
 # Current state
 
-- **Bluetooth** connection has to established manually before programm start
+- **Bluetooth** connection has to be established manually before programm start
 - **Reading input** from bluetooth-connected dual sense (ps5) gamepad works, see supported events below
 - **Gadget mode** *seems* to work
   - Linux detects the RPi as the simulated gamepad (using `lsusb`), but `dmesg` shows [some errors](./doc/Development.md#dmesg-errors-on-linux-61) that were not shown on previous linux kernels (5.15 worked, 6.1 doesnt)
@@ -13,7 +13,7 @@ If you have any ideas or know of anything I should avoid or be careful with, don
   - Missing: Touchpad touch location, **vibration**, leds, battery state readout
 
 **In short:**
-> - Controller can be used normally in a game on Steam (or other games that support PS controllers natively on Win10)
+> - Controller is recognized by Steam. Currently, the latency is to high to be usable for gaming.
 > - Vibration not supported
 
 <br>
