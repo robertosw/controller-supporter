@@ -40,3 +40,6 @@ https://electronics.stackexchange.com/a/400268
 [PS Dev Wiki](https://www.psdevwiki.com/)
 [DualShock Dev Wiki](https://www.psdevwiki.com/ps4/DualShock_4)
 [PS4 HID Output Report BT](https://www.psdevwiki.com/ps4/DS4-BT#HID_OUTPUT_reports)
+
+### Linux Bluetooth Handling with Rust:
+[overskride](https://github.com/kaii-lb/overskride)
