@@ -41,5 +41,9 @@ https://electronics.stackexchange.com/a/400268
 [DualShock Dev Wiki](https://www.psdevwiki.com/ps4/DualShock_4)
 [PS4 HID Output Report BT](https://www.psdevwiki.com/ps4/DS4-BT#HID_OUTPUT_reports)
 
-### Linux Bluetooth Handling with Rust:
-[overskride](https://github.com/kaii-lb/overskride)
+### Random Ideas and Inspiration
+- [Linux BT UI written in Rust](https://github.com/kaii-lb/overskride)
+- [RPI Embedded](https://docs.rs/rpi_embedded/latest/rpi_embedded/)
+    - Fork of [RPPAL](https://github.com/golemparts/rppal)
+    - RPi still runs linux, but this library apparently allows direct access to hardware components
+    - If this works, could be used for better USB output
