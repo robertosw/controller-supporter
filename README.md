@@ -1,4 +1,4 @@
-If you have any ideas or know of anything I should avoid or be careful with, don't hesitate to create a discussion to tell me :D
+***I have stopped developing this any further.*** The biggest reason is that Microsoft is starting to block unofficial XBOX accessories. This is coming to PC pretty soon and I dont want to reverse engineer some ingenious device authentication from Microsoft... if thats even legal. It was fun to develop and test, but with Steam's gamepad support getting better every day, I dont even need this tool anymore.
 
 # Current state
 
